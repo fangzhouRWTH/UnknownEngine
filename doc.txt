@@ -1,0 +1,37 @@
+LINUX
+
+$ conan install . --build=missing
+$ cd build/Release
+$ source ./generators/conanbuild.sh
+Capturing current environment in deactivate_conanbuildenv-release-x86_64.sh
+Configuring environment variables
+$ cmake ../.. -DCMAKE_TOOLCHAIN_FILE=generators/conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release
+$ cmake --build .
+...
+Building with CMake version: 3.22.6
+...
+[100%] Built target compressor
+
+$ ./compressor
+Uncompressed size is: 233
+Compressed size is: 147
+ZLIB VERSION: 1.2.11
+$ source ./generators/deactivate_conanbuild.sh
+
+WINDOWS
+$ conan install . --build=missing
+$ cd build
+$ generators\conanbuild.bat
+# assuming Visual Studio 15 2017 is your VS version and that it matches your default profile
+$ cmake .. -G "Visual Studio 15 2017" -DCMAKE_TOOLCHAIN_FILE=generators\conan_toolchain.cmake
+$ cmake --build . --config Release
+...
+Building with CMake version: 3.22.6
+...
+[100%] Built target compressor
+
+$ Release\compressor.exe
+Uncompressed size is: 233
+Compressed size is: 147
+ZLIB VERSION: 1.2.11
+$ generators\deactivate_conanbuild.bat

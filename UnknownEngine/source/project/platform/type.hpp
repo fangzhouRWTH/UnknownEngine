@@ -1,0 +1,36 @@
+#pragma once
+
+#ifdef __linux__
+#include <stdint.h>
+#endif
+
+#ifdef __linux__
+
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
+
+typedef int8_t i8;
+typedef int16_t i16;
+typedef int32_t i32;
+typedef int64_t i64;
+
+typedef uint64_t h64;
+typedef uint32_t h32;
+
+typedef unsigned char byte;
+
+#endif
+
+namespace unknown::ecs
+{
+    typedef u64 UniqueID;
+    typedef u16 DepartmentID;
+    typedef u16 ClassID;
+    typedef u32 LocalID;
+
+    typedef u32 ComponentID;
+    typedef u64 EntityID;
+    typedef u32 SystemID;
+}

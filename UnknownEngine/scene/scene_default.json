@@ -1,0 +1,40 @@
+{
+    "scene": {
+        "entities": [
+            {
+                "name": "player",
+                "type": "EPlayer",
+                "components": [
+                    {
+                        "type": "CTransform"
+                    },
+                    {
+                        "type": "CCamera"
+                    },
+                    {
+                        "type": "CInputController"
+                    }
+                ]
+            },
+            {
+                "name": "object1",
+                "type": "EOpponent",
+                "components": [
+                    {
+                        "type": "CTransform"
+                    },
+                    {
+                        "type": "CMesh",
+                        "assets": {
+                            "model": "",
+                            "material": {
+                                "vertex_shader": "",
+                                "fragment_shader": ""
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+}

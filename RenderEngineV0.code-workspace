@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"cmake.copyCompileCommands": "${workspaceFolder}/compile_commands.json",
+		"C_Cpp.default.compileCommands": "${workspaceFolder}/compile_commands.json",
+		"files.associations": {
+			"deque": "cpp"
+		},
+	}
+}
