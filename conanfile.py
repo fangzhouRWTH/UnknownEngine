@@ -19,6 +19,7 @@ class RenderEngine(ConanFile):
         self.requires("eigen/3.4.0")
         self.requires("stb/cci.20230920")
         self.requires("nlohmann_json/3.11.2")
+        self.requires("catch2/3.7.0")
         
         # Add base64 dependency only for Windows
         #if self.settings.os == "Windows":

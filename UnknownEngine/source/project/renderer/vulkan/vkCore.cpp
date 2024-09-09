@@ -163,12 +163,13 @@ namespace unknown::renderer::vulkan
         {
             mainDrawContext.OpaqueSurfaces.clear();
             auto rm = asset::ResourceManager::Get();
-            std::string modelPath = "/home/fzl/workspace/git_projects/RenderEngineV0/UnknownEngine/assets/models/structure/structure.glb";
+            std::string modelPath = "/home/fzl/workspace/git_projects/RenderEngineV0/UnknownEngine/assets/models/structure/structure_.glb";
             // std::string modelPath = "/home/fzl/workspace/git_projects/RenderEngineV0/assets/models/test/three_boxes.glb";
+            asset::ResourceManager::DebugPrintAssetHierarchy(modelPath);
+            
             h64 h = math::HashString(modelPath);
             rm->AddResourceMetaData(modelPath, asset::ResourceType::Model);
             auto b = rm->LoadModelData(h);
-
             // test
             auto sd = rm->GetSceneData(h);
 
@@ -411,11 +412,11 @@ namespace unknown::renderer::vulkan
             // Vec3f center = eye + Vec3f(cInfo.forward.x(), cInfo.forward.y(), cInfo.forward.z());
             // Vec3f up = Vec3f(cInfo.up.x(), cInfo.up.y(), cInfo.up.z());
             // auto view = math::LookAt(eye, center, up);
-            // // notice here far/near is reverted
+            // notice here far/near is reverted
             // auto projection = math::PerspectiveVK(cInfo.fov_radian, (float)_drawExtent.width / (float)_drawExtent.height, cInfo.near, cInfo.far);
-            // // projection.col(1).y() *= -1.f;
+            // projection.col(1).y() *= -1.f;
             // push_constants.worldMatrix = projection * view;
-            // // INFO_LOG("x:[{}] y:[{}] z:[{}]",eye.x(),eye.y(),eye.z());
+            // INFO_LOG("x:[{}] y:[{}] z:[{}]",eye.x(),eye.y(),eye.z());
 
             // push_constants.vertexBuffer = testMeshes[0]->meshBuffers.vertexBufferAddress;
 

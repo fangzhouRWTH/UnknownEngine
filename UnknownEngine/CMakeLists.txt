@@ -55,6 +55,7 @@ set(RENDERER_SOURCE_FILES
     ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/asset/resourceManager.cpp
     #${CMAKE_SOURCE_DIR}/source/project/asset/assetManager.cpp
     ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/asset/textureLoader.cpp
+    ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/asset/utils/assimpHelper.cpp
     #{CMAKE_SOURCE_DIR}/source/project/asset/texture.cpp
 
     ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/world/world.cpp
@@ -97,6 +98,8 @@ target_include_directories(UnknownEngine PUBLIC
                           "${PROJECT_SOURCE_DIR}/source/project"
                           )
 
+
+add_subdirectory(tests)
 # set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 # set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 # include(CPack)

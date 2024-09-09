@@ -1,12 +1,14 @@
 #pragma once
-#include <nlohmann/json.hpp>
+//#include <nlohmann/json.hpp>
 #include <memory>
 #include <string>
 #include <fstream>
 #include <iostream>
+#include <unordered_map>
 #include "core/math.hpp"
 #include "core/structure.hpp"
-#include "renderer/rendererHandles.hpp"
+#include "core/structure/graph.hpp"
+//#include "renderer/rendererHandles.hpp"
 
 namespace unknown
 {
@@ -17,6 +19,60 @@ namespace unknown
 
     // private:
     // };
+    enum class SceneNodeType
+    {
+        Empty,
+        Mesh,
+
+        ENUM_MAX,
+    };
+
+    struct ISceneNode
+    {
+        virtual ~ISceneNode() {}
+        ISceneNode(SceneNodeType t) : type(t) {}
+        const SceneNodeType type;
+        Mat4f transform = Mat4f::Identity();
+    };
+
+    struct SceneEmptyNode final : public ISceneNode
+    {
+        virtual ~SceneEmptyNode() override {};
+        SceneEmptyNode() : ISceneNode(SceneNodeType::Empty) {}
+    };
+
+    struct MeshNodeData
+    {
+        h64 ResourceHash;
+        h64 GPUResourceHash;
+    };
+
+    struct SceneMeshNode final : public ISceneNode
+    {
+        virtual ~SceneMeshNode() override {};
+        SceneMeshNode() : ISceneNode(SceneNodeType::Mesh) {}
+        MeshNodeData data;
+    };
+
+    typedef structure::NodeIndex SceneNodeIndex;
+    class SceneTree
+    {
+        // TODO CONSTRUCTORS
+    public:
+        SceneTree();
+        std::pair<SceneNodeIndex, std::shared_ptr<ISceneNode>> CreateNode(SceneNodeType type, SceneNodeIndex parent);
+        std::pair<SceneNodeIndex, std::shared_ptr<ISceneNode>> CreateAttachRoot(SceneNodeType type);
+        bool RemoveNode(SceneNodeIndex index);
+        bool HasNode(SceneNodeIndex index);
+        bool GetChilds(SceneNodeIndex index, std::vector<SceneNodeIndex> & childs);
+        SceneNodeIndex GetParent(SceneNodeIndex index);
+
+        const static SceneNodeIndex mIndexInvalid;
+    private:
+        std::unordered_map<SceneNodeIndex, std::shared_ptr<ISceneNode>> mNodes;
+        structure::SimpleGraph<512u, 512u> mGraph;
+        const SceneNodeIndex mRootIndex = 0u;
+    };
 
     class SceneLoader
     {

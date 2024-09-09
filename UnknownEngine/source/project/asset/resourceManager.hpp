@@ -48,6 +48,7 @@ namespace unknown::asset
     class ResourceManager
     {
     public:
+        static void DebugPrintAssetHierarchy(std::string_view assetPath);
         static std::shared_ptr<ResourceManager> Get();
 
         std::shared_ptr<SceneData> GetSceneData(h64 hash);

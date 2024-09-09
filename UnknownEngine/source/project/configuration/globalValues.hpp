@@ -14,4 +14,5 @@ namespace unknown::config
     extern const std::string scene_folder_path;
 
     extern const std::string config_folder_path;
+    extern const std::string log_folder_path;
 }

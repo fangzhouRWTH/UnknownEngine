@@ -18,5 +18,6 @@ find_package(Eigen3 REQUIRED)
 find_package(stb REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(VulkanHeaders REQUIRED)
+find_package(Catch2 REQUIRED)
 
 add_subdirectory(UnknownEngine)

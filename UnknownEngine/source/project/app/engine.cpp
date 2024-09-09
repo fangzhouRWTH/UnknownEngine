@@ -37,6 +37,8 @@ namespace unknown
     void DefaultPlayerController(unknown::ecs::CTransform *transformComponent, const unknown::input::KeyEvents &keyEvent,
                                  const unknown::input::CursorPosition &cursor, float dt)
     {
+        float speed = 10.f;
+
         auto dx = cursor._current.x() - cursor._previous.x();
         auto dy = cursor._current.y() - cursor._previous.y();
         float yaw = dx * dt * 0.01f * 3.14159f;
@@ -56,22 +58,22 @@ namespace unknown
         if (keyEvent.down.IsSet(unknown::input::Key::W))
         {
             unknown::Vec4f move = linear.col(1);
-            transformComponent->transform.col(3) += move * 1.f * dt;
+            transformComponent->transform.col(3) += move * speed * dt;
         }
         if (keyEvent.down.IsSet(unknown::input::Key::S))
         {
             unknown::Vec4f move = linear.col(1);
-            transformComponent->transform.col(3) -= move * 1.f * dt;
+            transformComponent->transform.col(3) -= move * speed * dt;
         }
         if (keyEvent.down.IsSet(unknown::input::Key::D))
         {
             unknown::Vec4f move = linear.col(0);
-            transformComponent->transform.col(3) += move * 1.f * dt;
+            transformComponent->transform.col(3) += move * speed * dt;
         }
         if (keyEvent.down.IsSet(unknown::input::Key::A))
         {
             unknown::Vec4f move = linear.col(0);
-            transformComponent->transform.col(3) -= move * 1.f * dt;
+            transformComponent->transform.col(3) -= move * speed * dt;
         }
 
         transformComponent->transform.block<3, 3>(0, 0) = linear.block<3, 3>(0, 0);
