@@ -55,30 +55,30 @@ namespace unknown::ecs
             auto t = trans->transform;
             // INFO_LOG("TRANS: X: {}   Y: {}   Z: {}",t.col(3).x(),t.col(3).y(),t.col(3).z());
 
-            auto pgHandle = mesh->renderObject.programHandle;
-            renderer::GraphicBackend::UseProgram(pgHandle);
-            renderer::GraphicBackend::SetUniform(pgHandle, "diffuse_texture", 0);
-            renderer::GraphicBackend::SetUniform(pgHandle, "specular_texture", 1);
+            // auto pgHandle = mesh->renderObject.programHandle;
+            // renderer::GraphicBackend::UseProgram(pgHandle);
+            // renderer::GraphicBackend::SetUniform(pgHandle, "diffuse_texture", 0);
+            // renderer::GraphicBackend::SetUniform(pgHandle, "specular_texture", 1);
 
-            auto reObject = mesh->renderObject;
-            std::vector<unknown::renderer::TextureHandle> textures;
-            textures.push_back(reObject.diffuseTextureHandles);
-            textures.push_back(reObject.specularTextureHandles);
-            unknown::renderer::GraphicBackend::UseTexture(textures);
+            // auto reObject = mesh->renderObject;
+            // std::vector<unknown::renderer::TextureHandle> textures;
+            // textures.push_back(reObject.diffuseTextureHandles);
+            // textures.push_back(reObject.specularTextureHandles);
+            // unknown::renderer::GraphicBackend::UseTexture(textures);
 
-            unknown::renderer::GraphicBackend::SetUniform(pgHandle, "view", view);
-            unknown::renderer::GraphicBackend::SetUniform(pgHandle, "projection", persM);
-            unknown::renderer::GraphicBackend::SetUniform(pgHandle, "uCamPos", eye);
+            // unknown::renderer::GraphicBackend::SetUniform(pgHandle, "view", view);
+            // unknown::renderer::GraphicBackend::SetUniform(pgHandle, "projection", persM);
+            // unknown::renderer::GraphicBackend::SetUniform(pgHandle, "uCamPos", eye);
 
-            tempTime += context.deltaTime;
-            Vec3f dirLight = Vec3f(cos(tempTime),sin(tempTime),-1.f);
-            unknown::renderer::GraphicBackend::SetUniform(pgHandle, "uDirectionalLight", dirLight);
+            // tempTime += context.deltaTime;
+            // Vec3f dirLight = Vec3f(cos(tempTime),sin(tempTime),-1.f);
+            // unknown::renderer::GraphicBackend::SetUniform(pgHandle, "uDirectionalLight", dirLight);
 
-            // auto p = cubePositions[i];
-            // Mat4f model = math::Rotate(Mat4f::Identity(), {1.f, 0.f, 0.f}, math::ToRadian(15 * i));
-            // Mat4f model = Mat4f::Identity();
-            unknown::renderer::GraphicBackend::SetUniform(pgHandle, "model", trans->transform);
-            renderer::GraphicBackend::Draw(reObject.elementHandle);
+            // // auto p = cubePositions[i];
+            // // Mat4f model = math::Rotate(Mat4f::Identity(), {1.f, 0.f, 0.f}, math::ToRadian(15 * i));
+            // // Mat4f model = Mat4f::Identity();
+            // unknown::renderer::GraphicBackend::SetUniform(pgHandle, "model", trans->transform);
+            // renderer::GraphicBackend::Draw(reObject.elementHandle);
         }
     }
 

@@ -107,10 +107,10 @@ namespace unknown
 
         // Renderer
         {
-            renderer::RenderStates states;
-            states.set(renderer::RenderStates::State::DepthTest);
-            states.set(renderer::RenderStates::State::BackCulling);
-            renderer::GraphicBackend::SetRenderStates(states);
+        //     renderer::RenderStates states;
+        //     states.set(renderer::RenderStates::State::DepthTest);
+        //     states.set(renderer::RenderStates::State::BackCulling);
+        //     renderer::GraphicBackend::SetRenderStates(states);
         }
 
         // ECS
@@ -195,10 +195,10 @@ namespace unknown
 
     void Engine::Run()
     {
-        renderer::RenderStates states;
-        states.set(renderer::RenderStates::State::DepthTest);
-        states.set(renderer::RenderStates::State::BackCulling);
-        renderer::GraphicBackend::SetRenderStates(states);
+        // renderer::RenderStates states;
+        // states.set(renderer::RenderStates::State::DepthTest);
+        // states.set(renderer::RenderStates::State::BackCulling);
+        // renderer::GraphicBackend::SetRenderStates(states);
         mEngineClock.Activate();
 
         float f1, f2, f3, f4;

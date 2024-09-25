@@ -75,7 +75,7 @@ namespace unknown
             std::cout << "Failed to initialize GLAD" << std::endl;
         }
 #endif
-        unknown::renderer::GraphicBackend::Initialize();
+        //unknown::renderer::GraphicBackend::Initialize();
     }
 
     void FrameworkManager::TerminateMain()

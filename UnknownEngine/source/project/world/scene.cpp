@@ -39,6 +39,12 @@ namespace unknown
         return CreateNode(type,mRootIndex);
     }
 
+    std::shared_ptr<ISceneNode> SceneTree::GetNode(SceneNodeIndex index)
+    {
+        auto nIt = mNodes.find(index);
+        return nIt->second;
+    }
+
     bool SceneTree::RemoveNode(SceneNodeIndex index)
     {
         if(index == mRootIndex||!mGraph.HasNode(index))

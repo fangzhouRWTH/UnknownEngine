@@ -2,9 +2,10 @@
 #include "platform/type.hpp"
 #include "core/handles.hpp"
 #include "memory/resource.hpp"
-#include "math.h"
+#include "core/math.hpp"
 #include "core/structure.hpp"
 #include "world/scene.hpp"
+#include "core/base.hpp"
 
 #include "renderer/rendererHandles.hpp"
 
@@ -17,14 +18,14 @@
 
 namespace unknown::asset
 {
-    struct Vertex
-    {
-        Vec3f position;
-        float uv_x;
-        Vec3f normal;
-        float uv_y;
-        Vec4f color;
-    };
+    // struct Vertex
+    // {
+    //     Vec3f position;
+    //     float uv_x;
+    //     Vec3f normal;
+    //     float uv_y;
+    //     Vec4f color;
+    // };
 
     struct IAssetObject
     {
@@ -86,6 +87,10 @@ namespace unknown::asset
     {
         std::vector<Vertex> vertices;
         std::vector<u32> indices;
+        bool uploaded = false;
+        h64 gpuHash;
+        //todo
+        GPUMeshBuffers buffers;
     };
 
     struct MeshDataHandle : public Handle<MeshDataHandle>

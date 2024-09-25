@@ -29,26 +29,28 @@
 template <typename HandleType>
 struct Handle
 {
-private:
-    static u32 _current;
-    u32 _this = kInvalidHandle;
-
 public:
     const static u32 kInvalidHandle = 0xFFFFFFFF;
-    static u32 Current() { return _current; }
-    void Set(u32 h) { _this = h; }
-    u32 Get() { return _this; }
     bool IsValid() { return _this != kInvalidHandle; }
 
 protected:
-    static HandleType CreateHandle()
+    static HandleType CreateHandle(u32 value)
     {
         HandleType _h;
-        assert(_current < kInvalidHandle);
-        _h.Set(_current == kInvalidHandle ? kInvalidHandle : _current++);
+        _h._this = value;
+        //assert(_current < kInvalidHandle);
+        //_h.Set(_current == kInvalidHandle ? kInvalidHandle : _current++);
         return _h;
     }
+
+    //static u32 Current() { return _current; }
+    void Set(u32 h) { _this = h; }
+    u32 Get() { return _this; }
+
+private:
+    //static u32 _current;
+    u32 _this = kInvalidHandle;
 };
 
-template <typename HandleType>
-u32 Handle<HandleType>::_current = 0u;
+// template <typename HandleType>
+// u32 Handle<HandleType>::_current = 0u;

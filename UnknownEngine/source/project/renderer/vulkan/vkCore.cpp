@@ -163,71 +163,127 @@ namespace unknown::renderer::vulkan
         {
             mainDrawContext.OpaqueSurfaces.clear();
             auto rm = asset::ResourceManager::Get();
+            rm->Initialize();
+            // todo temp
+            rm->SetRenderBackend(this);
             std::string modelPath = "/home/fzl/workspace/git_projects/RenderEngineV0/UnknownEngine/assets/models/structure/structure_.glb";
             // std::string modelPath = "/home/fzl/workspace/git_projects/RenderEngineV0/assets/models/test/three_boxes.glb";
-            asset::ResourceManager::DebugPrintAssetHierarchy(modelPath);
-            
+            //asset::ResourceManager::DebugPrintAssetHierarchy(modelPath);
+
             h64 h = math::HashString(modelPath);
             rm->AddResourceMetaData(modelPath, asset::ResourceType::Model);
             auto b = rm->LoadModelData(h);
-            // test
-            auto sd = rm->GetSceneData(h);
+            auto sceneData = rm->GetSceneTree(h);
+            // // test
+            // auto sd = rm->GetSceneData(h);
 
-            auto op = [](std::shared_ptr<asset::ISceneContent> parent, std::shared_ptr<asset::ISceneContent> child) -> void
-            {
-                child->transform = parent->transform * child->transform;
-                // INFO_LOG("update X : {}, Y : {}, Z : {}", child->transform.col(3).x(), child->transform.col(3).y(), child->transform.col(3).z())
-            };
-            sd->scene.RecursiveOperationDownward(op);
-
-            auto nodes = sd->scene.GetTopologicContentOrder();
-            // auto nkeys = sd->scene.GetTopologicKeyOrder();
-            // for(auto k:nkeys)
+            // auto op = [](std::shared_ptr<asset::ISceneContent> parent, std::shared_ptr<asset::ISceneContent> child) -> void
             // {
-            //     auto sceneMesh = sd->scene.GetNode(k)->content;
+            //     child->transform = parent->transform * child->transform;
+            //     // INFO_LOG("update X : {}, Y : {}, Z : {}", child->transform.col(3).x(), child->transform.col(3).y(), child->transform.col(3).z())
+            // };
+            // sd->scene.RecursiveOperationDownward(op);
 
+            // auto nodes = sd->scene.GetTopologicContentOrder();
+            if(sceneData)
+            {
+                // temp
+                float d = 0.0;
+                std::function<void(std::shared_ptr<SceneTree>, SceneNodeIndex, Mat4f)> stRecursive;
+                stRecursive = [&](std::shared_ptr<SceneTree> tree, SceneNodeIndex parent, Mat4f transform)
+                {
+                    d += 10.0;
+                    std::vector<SceneNodeIndex> childs;
+                    tree->GetChilds(parent, childs);
+                    for (auto ci : childs)
+                    {
+                        auto nPtr = tree->GetNode(ci);
+                        assert(nPtr);
+
+                        if (std::shared_ptr<SceneEmptyNode> eNode = std::dynamic_pointer_cast<SceneEmptyNode>(nPtr); eNode)
+                        {
+                            Mat4f newTransform = eNode->transform * transform;
+                            //Mat4f newTransform = Mat4f::Identity();
+                            stRecursive(tree, ci, newTransform);
+                        }
+                        else if (std::shared_ptr<SceneMeshNode> mNode = std::dynamic_pointer_cast<SceneMeshNode>(nPtr); mNode)
+                        {
+                            // draw
+                            GPUMeshInfo meshInfo;
+                            h64 meshHash = mNode->data.ResourceHash;
+                            std::shared_ptr<asset::MeshData> meshData = rm->GetMeshData(meshHash);
+                            if (!meshData || !meshData->uploaded)
+                                continue;
+
+                            meshInfo.surface.startIndex = 0u;
+                            meshInfo.surface.count = meshData->indices.size();
+                            meshInfo.meshBuffer = meshData->buffers;
+                            mMeshBufferBank.meshInfos.insert({meshInfo.meshDataHandle, meshInfo});
+                            //sceneMesh->meshGpuInfoHash = meshHandle;
+
+                            RenderObject def;
+                            def.indexCount = meshInfo.surface.count;
+                            def.firstIndex = meshInfo.surface.startIndex;
+                            def.indexBuffer = meshInfo.meshBuffer.indexBuffer.buffer;
+                            def.material = &defaultData;
+
+                            def.transform = transform;
+
+                            def.vertexBufferAddress = meshInfo.meshBuffer.vertexBufferAddress;
+
+                            mainDrawContext.OpaqueSurfaces.push_back(def);
+                        }
+                    }
+                };
+
+                auto rNode = sceneData->GetNode(sceneData->RootIndex());
+                auto rEmpty = std::dynamic_pointer_cast<SceneEmptyNode>(rNode);
+                assert(rEmpty);
+                Mat4f rTransform = rEmpty->transform;
+                //stRecursive(sceneData,sceneData->RootIndex(),rTransform);
+            }
+
+            // u32 count = 0u;
+            // for (auto n : nodes)
+            // {
+            //     INFO_LOG("X : {}, Y : {}, Z : {}", n->transform.col(3).x(), n->transform.col(3).y(), n->transform.col(3).z())
+            //     if (n->type == asset::SceneContentType::Mesh)
+            //     {
+            //         count++;
+            //         auto sceneMesh = std::dynamic_pointer_cast<asset::SceneMesh>(n);
+            //         assert(sceneMesh);
+            //         GPUMeshInfo meshInfo;
+            //         auto meshHandle = sceneMesh->meshDataHash;
+
+            //         if (mMeshBufferBank.meshInfos.find(meshHandle) != mMeshBufferBank.meshInfos.end())
+            //         {
+            //             sceneMesh->meshGpuInfoHash = meshHandle;
+            //         }
+            //         else
+            //         {
+            //             auto meshData = rm->GetMeshData(meshHandle);
+            //             meshInfo.meshDataHandle = meshHandle;
+            //             meshInfo.surface.startIndex = 0u;
+            //             meshInfo.surface.count = meshData->indices.size();
+            //             meshInfo.meshBuffer = uploadMesh(meshData->indices, meshData->vertices);
+            //             mMeshBufferBank.meshInfos.insert({meshInfo.meshDataHandle, meshInfo});
+            //             sceneMesh->meshGpuInfoHash = meshHandle;
+            //         }
+
+            //         Mat4f nodeMatrix = sceneMesh->transform;
+            //         RenderObject def;
+            //         def.indexCount = meshInfo.surface.count;
+            //         def.firstIndex = meshInfo.surface.startIndex;
+            //         def.indexBuffer = meshInfo.meshBuffer.indexBuffer.buffer;
+            //         def.material = &defaultData;
+
+            //         def.transform = nodeMatrix;
+            //         def.vertexBufferAddress = meshInfo.meshBuffer.vertexBufferAddress;
+
+            //         mainDrawContext.OpaqueSurfaces.push_back(def);
+            //     }
             // }
 
-            u32 count = 0u;
-            for (auto n : nodes)
-            {
-                INFO_LOG("X : {}, Y : {}, Z : {}", n->transform.col(3).x(), n->transform.col(3).y(), n->transform.col(3).z())
-                if (n->type == asset::SceneContentType::Mesh)
-                {
-                    count++;
-                    auto sceneMesh = std::dynamic_pointer_cast<asset::SceneMesh>(n);
-                    assert(sceneMesh);
-                    GPUMeshInfo meshInfo;
-                    auto meshHandle = sceneMesh->meshDataHash;
-
-                    if (mMeshBufferBank.meshInfos.find(meshHandle) != mMeshBufferBank.meshInfos.end())
-                    {
-                        sceneMesh->meshGpuInfoHash = meshHandle;
-                    }
-                    else
-                    {
-                        auto meshData = rm->GetMeshData(meshHandle);
-                        meshInfo.meshDataHandle = meshHandle;
-                        meshInfo.surface.startIndex = 0u;
-                        meshInfo.surface.count = meshData->indices.size();
-                        meshInfo.meshBuffer = uploadMesh(meshData->indices, meshData->vertices);
-                        mMeshBufferBank.meshInfos.insert({meshInfo.meshDataHandle, meshInfo});
-                        sceneMesh->meshGpuInfoHash = meshHandle;
-                    }
-
-                    Mat4f nodeMatrix = sceneMesh->transform;
-                    RenderObject def;
-                    def.indexCount = meshInfo.surface.count;
-                    def.firstIndex = meshInfo.surface.startIndex;
-                    def.indexBuffer = meshInfo.meshBuffer.indexBuffer.buffer;
-                    def.material = &defaultData;
-
-                    def.transform = nodeMatrix;
-                    def.vertexBufferAddress = meshInfo.meshBuffer.vertexBufferAddress;
-
-                    mainDrawContext.OpaqueSurfaces.push_back(def);
-                }
-            }
             // //asset::MeshRawData rData;
             // //asset::AssetManager::LoadMeshRawData(rData, assetInfo);
             // asset::SceneRawData rData;
@@ -1245,14 +1301,14 @@ namespace unknown::renderer::vulkan
         vmaDestroyBuffer(_allocator, buffer.buffer, buffer.allocation);
     }
 
-    GPUMeshBufferHandle VulkanCore::createGPUMesh(std::span<uint32_t> indices, std::span<asset::Vertex> vertices)
+    GPUMeshBufferHandle VulkanCore::createGPUMesh(std::span<uint32_t> indices, std::span<Vertex> vertices)
     {
         GPUMeshBuffers meshBuffers = uploadMesh(indices, vertices);
         return GPUMeshBufferHandle();
         // return mGPUMeshBuffersMap.AddResource(meshBuffers);
     }
 
-    GPUMeshBuffers VulkanCore::uploadMesh(std::span<uint32_t> indices, std::span<asset::Vertex> vertices)
+    GPUMeshBuffers VulkanCore::uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices)
     {
         //> mesh_create_1
         const size_t vertexBufferSize = vertices.size() * sizeof(asset::VkVertex);

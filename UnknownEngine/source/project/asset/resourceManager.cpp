@@ -3,16 +3,16 @@
 #include "debug/log.hpp"
 #include "configuration/globalValues.hpp"
 
-#include "assimp/Importer.hpp"
-#include "assimp/scene.h"
-#include "assimp/postprocess.h"
+#include "renderer/vulkan/vkCore.hpp"
+
+#include "utils/assimpHelper.hpp"
 
 #include <iostream>
 #include <fstream>
 
 namespace unknown::asset
 {
-    std::shared_ptr<ResourceManager> ResourceManager::sInstance = nullptr;
+    //std::shared_ptr<ResourceManager> ResourceManager::sInstance = nullptr;
 
     struct SceneProcessData
     {
@@ -111,7 +111,7 @@ namespace unknown::asset
         return res;
     }
 
-    void process_scene_node(SceneProcessData spData, h64 & nodeCounter)
+    void process_scene_node(SceneProcessData spData, h64 &nodeCounter)
     {
         if (!spData.node)
             return;
@@ -174,13 +174,13 @@ namespace unknown::asset
             cspData.node = node->mChildren[i];
             cspData.parentName = nodeName;
             cspData.parentH = nodeH;
-            process_scene_node(cspData,nodeCounter);
+            process_scene_node(cspData, nodeCounter);
         }
     }
 
-    void debug_scene_process_node(std::ofstream & ofs, const aiScene * scene, aiNode* node, u32 indent)
+    void debug_scene_process_node(std::ofstream &ofs, const aiScene *scene, aiNode *node, u32 indent)
     {
-        for(auto i = 0u; i< indent; i++)
+        for (auto i = 0u; i < indent; i++)
         {
             ofs << "--";
         }
@@ -189,33 +189,33 @@ namespace unknown::asset
         u32 cNum = node->mNumChildren;
         u32 mNum = node->mNumMeshes;
 
-        for(u32 i = 0u; i< mNum; i++)
+        for (u32 i = 0u; i < mNum; i++)
         {
-            for(auto j = 0u; j< indent + 1u; j++)
+            for (auto j = 0u; j < indent + 1u; j++)
             {
                 ofs << "--";
             }
             auto m = node->mMeshes[i];
 
-            ofs << "[mesh] [index "<< node->mMeshes[i] <<"]: " << scene->mMeshes[node->mMeshes[i]]->mName.C_Str() << "\n";
+            ofs << "[mesh] [index " << node->mMeshes[i] << "]: " << scene->mMeshes[node->mMeshes[i]]->mName.C_Str() << "\n";
         }
 
-        for(u32 i = 0u; i < cNum; i++)
+        for (u32 i = 0u; i < cNum; i++)
         {
             auto c = node->mChildren[i];
             debug_scene_process_node(ofs, scene, c, indent + 1u);
         }
     }
 
-    void debug_scene_process_mesh(std::ofstream & ofs, aiNode* node, u32 indent)
+    void debug_scene_process_mesh(std::ofstream &ofs, aiNode *node, u32 indent)
     {
-        
     }
 
     void debug_scene_graph_export(std::string_view assetPath, std::string_view outputPath)
     {
         std::ofstream file(outputPath.data());
-        if(file.bad())return;
+        if (file.bad())
+            return;
 
         u32 indent = 0u;
         Assimp::Importer import;
@@ -226,69 +226,103 @@ namespace unknown::asset
             return;
         }
 
-        file << "Asset: ["<< scene->mName.C_Str()<<"]:[" << assetPath << "]" << "\n";
+        file << "Asset: [" << scene->mName.C_Str() << "]:[" << assetPath << "]" << "\n";
 
-        debug_scene_process_node(file,scene,scene->mRootNode,indent+1u);
+        debug_scene_process_node(file, scene, scene->mRootNode, indent + 1u);
 
         file.close();
     }
 
-    void load_gltf(std::string_view path, SceneResourceBank &sceneResource, MeshResourceBank &meshResource)
+    void load_gltf(renderer::vulkan::VulkanCore *vkCore, std::string_view path, h64 hash, SceneResourceBank &sceneResource, MeshResourceBank &meshResource)
     {
-        Assimp::Importer import;
-        const aiScene *scene = import.ReadFile(path.data(), aiProcess_Triangulate | aiProcess_FlipUVs);
-        if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+        ProcessFunction nodeProcessCallback = [&](ProcessType pType, ProcessData pData) -> ProcessResult
         {
-            INFO_LOG("ERROR::ASSIMP::{}", import.GetErrorString());
-            return;
-        }
+            ProcessResult res;
+            switch (pType)
+            {
+            case ProcessType::Empty:
+                // INFO_PRINT("Processing Empty Node");
+                {
+                    assert(pData.sceneTree);
+                    assert(SceneTree::mIndexInvalid != pData.parentIndex);
+                    auto nodePair = pData.sceneTree->CreateNode(SceneNodeType::Empty, pData.parentIndex);
+                    auto nodePtr = std::dynamic_pointer_cast<SceneEmptyNode>(nodePair.second);
+                    assert(nodePtr);
+                    nodePtr->transform = pData.transform;
+                    res.createIndex = nodePair.first;
+                }
+                break;
+            case ProcessType::Mesh:
+                // INFO_PRINT("Processing Mesh Node");
+                {
+                    assert(pData.vertices);
+                    assert(pData.indices);
+                    auto mr = meshResource.GetMeshResource(pData.meshHash);
+                    assert(mr);
+                    // todo optimize
+                    mr->vertices = *pData.vertices;
+                    mr->indices = *pData.indices;
+                    // todo
+                    mr->buffers = vkCore->uploadMesh(mr->indices, mr->vertices);
+                    mr->uploaded = true;
+                }
+                break;
+            case ProcessType::QueryMesh:
+            {
+                assert(pData.sceneTree);
+                assert(SceneTree::mIndexInvalid != pData.parentIndex);
+                auto mr = meshResource.GetMeshResource(pData.meshHash);
+                if (mr != nullptr)
+                    res.meshRegistered = true;
+                else
+                {
+                    res.meshRegistered = false;
+                    mr = meshResource.AcquireMeshResource(pData.meshHash);
+                    assert(mr);
+                }
+                auto nodePair = pData.sceneTree->CreateNode(SceneNodeType::Mesh, pData.parentIndex);
+                auto nodePtr = std::dynamic_pointer_cast<SceneMeshNode>(nodePair.second);
+                assert(nodePtr);
+                nodePtr->data.ResourceHash = pData.meshHash;
+                res.createIndex = nodePair.first;
+            }
+            break;
+            default:
+                break;
+            }
 
-        h64 h = math::HashString(path);
-        u32 nm = scene->mNumMeshes;
-        scene->mMeshes;
-        // TODO: REMEMBER TO REMOVE INVALID DATA
-        auto sceneData = sceneResource.AcquireSceneResource(h);
+            return res;
+        };
 
-        if (!sceneData)
-        {
-            INFO_LOG("FAILED TO REQUIRE SCENE DATA FOR::{}", path.data());
-            return;
-        }
+        AssimpImportConfig config;
+        config.path = path;
+        config.debugOutput = false;
+        config.nodeFunction = nodeProcessCallback;
+        AssimpImporter importer;
+        importer.Import(config);
 
-        SceneProcessData sData(scene, path, h, meshResource, sceneData);
-        sData.node = scene->mRootNode;
-        sData.parentName = "";
-
-        h64 nodeCounter = 0u;
-        process_scene_node(sData, nodeCounter);
-
-        for (u32 i = 0u; i < scene->mNumMeshes ; i++)
-        {
-            auto n = scene->mMeshes[i];
-            auto name = n->mName.C_Str();
-            u32 a = 0;
-        }
-
-        assert(sceneData->scene.Build());
+        std::shared_ptr<SceneTree> sceneTree = sceneResource.AcquireSceneResource(hash);
+        importer.LoadSceneTree(sceneTree);
     }
 
     void ResourceManager::DebugPrintAssetHierarchy(std::string_view assetPath)
     {
         std::string output = config::log_folder_path + "asset_manager_log.txt";
-        debug_scene_graph_export(assetPath,output);
+        debug_scene_graph_export(assetPath, output);
     }
 
     std::shared_ptr<ResourceManager> ResourceManager::Get()
     {
-        if (!sInstance)
-        {
-            sInstance = std::make_shared<ResourceManager>();
-            sInstance->Initialize();
-        }
+        static std::shared_ptr<ResourceManager> sInstance(new ResourceManager);
         return sInstance;
     }
 
-    std::shared_ptr<SceneData> ResourceManager::GetSceneData(h64 hash)
+    // std::shared_ptr<SceneData> ResourceManager::GetSceneData(h64 hash)
+    // {
+    //     return mSceneResource.GetSceneResource(hash);
+    // }
+
+    std::shared_ptr<SceneTree> ResourceManager::GetSceneTree(h64 hash)
     {
         return mSceneResource.GetSceneResource(hash);
     }
@@ -348,13 +382,17 @@ namespace unknown::asset
             if (meta.type != ResourceType::Model)
                 return false;
 
-            load_gltf(meta.path, mSceneResource, mMeshResource);
+            load_gltf(mVkCore, meta.path, hash, mSceneResource, mMeshResource);
         }
         return false;
     }
 
     void ResourceManager::Initialize()
     {
+        if(mbInitialized)
+            return;
+
+        mbInitialized = true;
     }
 
     std::shared_ptr<MeshData> MeshResourceBank::GetMeshResource(h64 hash)
@@ -381,7 +419,7 @@ namespace unknown::asset
         // return nullptr;
     }
 
-    std::shared_ptr<SceneData> SceneResourceBank::GetSceneResource(h64 hash)
+    std::shared_ptr<SceneTree> SceneResourceBank::GetSceneResource(h64 hash)
     {
         if (mSceneResource.find(hash) != mSceneResource.end())
         {
@@ -390,11 +428,11 @@ namespace unknown::asset
         return nullptr;
     }
 
-    std::shared_ptr<SceneData> SceneResourceBank::AcquireSceneResource(h64 hash)
+    std::shared_ptr<SceneTree> SceneResourceBank::AcquireSceneResource(h64 hash)
     {
         if (mSceneResource.find(hash) == mSceneResource.end())
         {
-            auto s = std::make_shared<SceneData>();
+            auto s = std::make_shared<SceneTree>();
             mSceneResource[hash] = s;
             return s;
         }

@@ -264,8 +264,8 @@ namespace unknown::renderer::vulkan
 
         void immediate_submit(std::function<void(VkCommandBuffer cmd)> &&function);
 
-        GPUMeshBufferHandle createGPUMesh(std::span<uint32_t> indices, std::span<asset::Vertex> vertices);
-        GPUMeshBuffers uploadMesh(std::span<uint32_t> indices, std::span<asset::Vertex> vertices);
+        GPUMeshBufferHandle createGPUMesh(std::span<uint32_t> indices, std::span<Vertex> vertices);
+        GPUMeshBuffers uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices);
 
         AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
         AllocatedImage create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);

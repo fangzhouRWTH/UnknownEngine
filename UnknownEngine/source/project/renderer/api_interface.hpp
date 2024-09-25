@@ -112,26 +112,26 @@ namespace unknown::renderer
     public:
         virtual void initialize() = 0;
         virtual void shutdown() = 0;
-        virtual ProgramHandle create_shader(const char *vsCode, const char *fsCode) = 0;
-        virtual TextureHandle create_texture_2d(u32 width, u32 height, byte *data, ImageFormat format) = 0;
+        // virtual ProgramHandle create_shader(const char *vsCode, const char *fsCode) = 0;
+        // virtual TextureHandle create_texture_2d(u32 width, u32 height, byte *data, ImageFormat format) = 0;
         virtual RenderElementHandle create_mesh(VertexLayout layout, float *vertices, u32 uSize, u32 *indices, u32 iSize) = 0;
 
-        virtual void use_program(ProgramHandle handle) = 0;
-        virtual void set_uniform_bool(ProgramHandle handle, const char *name, bool value) = 0;
-        virtual void set_uniform_int(ProgramHandle handle, const char *name, int value) = 0;
-        virtual void set_uniform_float(ProgramHandle handle, const char *name, float value) = 0;
-        virtual void set_uniform_matrix_4_float(ProgramHandle handle, const char *name, float *data) = 0;
-        virtual void set_uniform_vector_2_float(ProgramHandle handle, const char *name, float *data) = 0;
-        virtual void set_uniform_vector_3_float(ProgramHandle handle, const char *name, float *data) = 0;
-        virtual void set_uniform_vector_4_float(ProgramHandle handle, const char *name, float *data) = 0;
+        // virtual void use_program(ProgramHandle handle) = 0;
+        // virtual void set_uniform_bool(ProgramHandle handle, const char *name, bool value) = 0;
+        // virtual void set_uniform_int(ProgramHandle handle, const char *name, int value) = 0;
+        // virtual void set_uniform_float(ProgramHandle handle, const char *name, float value) = 0;
+        // virtual void set_uniform_matrix_4_float(ProgramHandle handle, const char *name, float *data) = 0;
+        // virtual void set_uniform_vector_2_float(ProgramHandle handle, const char *name, float *data) = 0;
+        // virtual void set_uniform_vector_3_float(ProgramHandle handle, const char *name, float *data) = 0;
+        // virtual void set_uniform_vector_4_float(ProgramHandle handle, const char *name, float *data) = 0;
 
-        virtual void use_texture_2d(TextureHandle handle, u32 slot) = 0;
+        // virtual void use_texture_2d(TextureHandle handle, u32 slot) = 0;
 
-        virtual void set_render_states(RenderStates states) = 0;
-        virtual void set_clear_color(float r, float g, float b, float a) = 0;
-        virtual void clear_frame_buffer(ClearFrameBuffer clear) = 0;
-        virtual void draw(RenderElementHandle handle) = 0;
+        // virtual void set_render_states(RenderStates states) = 0;
+        // virtual void set_clear_color(float r, float g, float b, float a) = 0;
+        // virtual void clear_frame_buffer(ClearFrameBuffer clear) = 0;
+        // virtual void draw(RenderElementHandle handle) = 0;
 
-        virtual VertexLayout get_default_vertex_layout() = 0;
+        // virtual VertexLayout get_default_vertex_layout() = 0;
     };
 }

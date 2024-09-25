@@ -258,7 +258,7 @@ namespace unknown::structure
         }
 
     private:
-        inline bool setDirty()
+        inline void setDirty()
         {
             mIsDirty = true;
         }

@@ -8,7 +8,7 @@
 
 namespace unknown
 {
-    template<typename Handle>
+    template <typename Handle>
     struct ResourceInfos
     {
         u32 id;
@@ -115,5 +115,19 @@ namespace unknown
 
     private:
         std::vector<ResourceInfo> mResourceArray;
+    };
+
+    template <typename T,typename TData>
+    class ResourceTable
+    {
+    public:
+        void Add()
+        {
+        }
+        // Find(){}
+        // Has(){}
+
+    private:
+        //std::vector<TData>
     };
 }

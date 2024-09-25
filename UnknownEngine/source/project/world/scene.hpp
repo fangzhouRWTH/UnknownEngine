@@ -62,15 +62,17 @@ namespace unknown
         SceneTree();
         std::pair<SceneNodeIndex, std::shared_ptr<ISceneNode>> CreateNode(SceneNodeType type, SceneNodeIndex parent);
         std::pair<SceneNodeIndex, std::shared_ptr<ISceneNode>> CreateAttachRoot(SceneNodeType type);
+        std::shared_ptr<ISceneNode> GetNode(SceneNodeIndex index);
         bool RemoveNode(SceneNodeIndex index);
         bool HasNode(SceneNodeIndex index);
         bool GetChilds(SceneNodeIndex index, std::vector<SceneNodeIndex> & childs);
+        SceneNodeIndex RootIndex() {return mRootIndex;}
         SceneNodeIndex GetParent(SceneNodeIndex index);
 
         const static SceneNodeIndex mIndexInvalid;
     private:
         std::unordered_map<SceneNodeIndex, std::shared_ptr<ISceneNode>> mNodes;
-        structure::SimpleGraph<512u, 512u> mGraph;
+        structure::SimpleGraph<512u, 4096u> mGraph;
         const SceneNodeIndex mRootIndex = 0u;
     };
 
