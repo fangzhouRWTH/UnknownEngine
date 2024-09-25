@@ -1,10 +1,10 @@
 #pragma once
 
-#ifdef __linux__
+//#ifdef __linux__
 #include <stdint.h>
-#endif
+//#endif
 
-#ifdef __linux__
+//#ifdef __linux__
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -21,7 +21,7 @@ typedef uint32_t h32;
 
 typedef unsigned char byte;
 
-#endif
+//#endif
 
 namespace unknown::ecs
 {

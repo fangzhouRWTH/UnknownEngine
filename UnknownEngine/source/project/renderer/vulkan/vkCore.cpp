@@ -171,8 +171,8 @@ namespace unknown::renderer::vulkan
             //asset::ResourceManager::DebugPrintAssetHierarchy(modelPath);
 
             h64 h = math::HashString(modelPath);
-            rm->AddResourceMetaData(modelPath, asset::ResourceType::Model);
-            auto b = rm->LoadModelData(h);
+            //rm->AddResourceMetaData(modelPath, asset::ResourceType::Model);
+            //auto b = rm->LoadModelData(h);
             auto sceneData = rm->GetSceneTree(h);
             // // test
             // auto sd = rm->GetSceneData(h);

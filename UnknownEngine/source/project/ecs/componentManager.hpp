@@ -141,7 +141,7 @@ namespace unknown::ecs
         IComponent *GetComponent(const EntityID &entityId)
         {
             ComponentContainer<C> *container = GetComponentContainer<C>();
-            return container->template GetComponent(entityId);
+            return container->GetComponent(entityId);
         }
     };
 }

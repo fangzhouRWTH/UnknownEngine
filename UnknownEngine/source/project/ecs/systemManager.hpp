@@ -172,7 +172,7 @@ namespace unknown::ecs
         {
             SystemContainer<T> *container = GetSystemContainer<T>();
 
-            auto sh = container->template CreateSystem(std::forward<Args>(args)...);
+            auto sh = container->CreateSystem(std::forward<Args>(args)...);
             auto sys = GetSystem<T>(sh._system_id);
             sys->_ecs_manager_ptr = _ecs_manager_instance;
             return sh;
@@ -182,14 +182,14 @@ namespace unknown::ecs
         ISystem *GetSystem(const SystemID &systemId)
         {
             SystemContainer<T> *container = GetSystemContainer<T>();
-            return container->template GetSystem(systemId);
+            return container->GetSystem(systemId);
         }
 
         template <typename T>
         void RegisterEntity(const SystemID &systemId, const EntityID &entityId)
         {
             SystemContainer<T> *container = GetSystemContainer<T>();
-            T *system = (T *)container->template GetSystem(systemId);
+            T *system = (T *)container->GetSystem(systemId);
             system->RegisterEntity(entityId);
         }
 
