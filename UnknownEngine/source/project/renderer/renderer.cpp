@@ -132,7 +132,7 @@ namespace unknown::renderer
 RenderEngine::RenderEngine()
 {
     #if defined(API_VULKAN)
-    //mDetail=std::make_unique<vulkan::API_Vulkan>();
+    mDetail=std::make_unique<vulkan::API_Vulkan>();
     #endif
 }
 
@@ -145,6 +145,24 @@ std::shared_ptr<RenderEngine> RenderEngine::Get()
     static std::shared_ptr<RenderEngine> sInstancePtr(new RenderEngine);
 
     return sInstancePtr;
+}
+
+void RenderEngine::Initialize()
+{
+    if(!mInitialized)
+    {
+        mInitialized = true;
+    }
+}
+
+void *RenderEngine::GetCore()
+{
+    return mDetail->get_core();
+}
+
+GPUMeshBufferHandle RenderEngine::UploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices)
+{
+    return mDetail->upload_mesh(indices,vertices);
 }
 
 //     void GraphicBackend::Clear(ClearFrameBuffer clear)

@@ -47,13 +47,11 @@ namespace unknown::renderer
     };
 
     // VULKAN
+    #define DECL_HANDLE(HANDLE_NAME) struct HANDLE_NAME : public HandleTemplate<HANDLE_NAME> {}
+    // struct GPUMeshBufferHandle : public HandleTemplate<GPUMeshBufferHandle>
+    // {
+    // };
+    DECL_HANDLE(GPUMeshBufferHandle);
 
-    struct GPUMeshBufferHandle : public Handle<GPUMeshBufferHandle>
-    {
-        template <typename H, typename R>
-        friend class ResourceMap;
 
-        template <typename H, typename R>
-        friend class ResourceArray;
-    };
 }

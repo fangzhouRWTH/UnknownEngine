@@ -5,6 +5,8 @@
 #include <vector>
 #include <unordered_map>
 #include <cassert>
+#include <type_traits>
+#include <queue>
 
 namespace unknown
 {
@@ -29,7 +31,7 @@ namespace unknown
 
         bool FindResource(HandleType handle, ResourceInfo &info) const
         {
-            u32 index = handle.Get();
+            u32 index = handle.value();
             if (index >= mHashes.size())
                 return false;
             u32 hash = mHashes[index];
@@ -58,8 +60,8 @@ namespace unknown
                 return in.handle;
 
             HandleType handle = HandleType::CreateHandle();
-            assert(handle.Get() != HandleType::kInvalidHandle);
-            assert(handle.Get() == mHashes.size());
+            assert(handle.value() != HandleType::kInvalidHandle);
+            assert(handle.value() == mHashes.size());
             mHashes.emplace_back(hash);
             info.handle = handle;
             info.valid = true;
@@ -89,7 +91,7 @@ namespace unknown
 
         bool FindResource(HandleType handle, ResourceInfo &info) const
         {
-            u32 index = handle.Get();
+            u32 index = handle.value();
             if (index >= mResourceArray.size())
                 return false;
 
@@ -100,8 +102,8 @@ namespace unknown
         HandleType AddResource(ResourceInfo info)
         {
             HandleType handle = HandleType::CreateHandle();
-            assert(handle.Get() != HandleType::kInvalidHandle);
-            assert(handle.Get() == mResourceArray.size());
+            assert(handle.value() != HandleType::kInvalidHandle);
+            assert(handle.value() == mResourceArray.size());
             info.handle = handle;
             info.valid = true;
             mResourceArray.emplace_back(info);
@@ -117,17 +119,159 @@ namespace unknown
         std::vector<ResourceInfo> mResourceArray;
     };
 
-    template <typename T,typename TData>
+    template<typename DataType>
+    struct RecycleArray
+    {
+        std::vector<DataType> data;
+        std::queue<u32> freed;
+
+        u32 reserve(u32 size)
+        {
+            data.reserve(size);
+        }
+
+        u32 create()
+        {
+            u32 idx;
+            if(!freed.empty())
+            {
+                idx = freed.front();
+                freed.pop();
+            }
+            else
+            {
+                idx = data.size();
+                data.emplace_back();
+            }
+            return idx;
+        }
+
+        void free(u32 idx)
+        {
+            freed.push(idx);
+        }
+
+        DataType& get(u32 idx)
+        {
+            assert(idx < data.size());
+            return data[idx];
+        }
+
+        const DataType& get(u32 idx) const
+        {
+            assert(idx < data.size());
+            return data[idx];
+        }
+    };
+
+    template <typename HandleType, typename DataType>
     class ResourceTable
     {
-    public:
-        void Add()
-        {
-        }
-        // Find(){}
-        // Has(){}
+        //todo
+        //static_assert(std::is_base_of<HandleTemplate<HandleType>, HandleType>);
+        public:
+            HandleType Create()
+            {
+                HandleType handle;
+                if(!IsFull())
+                {
+                    u32 h2 = mContainer.create();
+                    handle.value() = mKeys.size();
+                    mKeys.push_back(h2);
+                }
+                return handle;
+            }
 
-    private:
-        //std::vector<TData>
+            void Remove(HandleType handle)
+            {
+                if(handle.value()<mKeys.size())
+                {
+                    u32 k = mKeys[handle.value()];
+                    if(k >= mCapacity)
+                        return;
+
+                    mKeys[handle.value()] = mCapacity;
+                    mContainer.free(k);
+                }
+            }
+
+            DataType* Get(HandleType handle)
+            {
+                if(handle.value()>=mKeys.size())
+                    return nullptr;
+
+                u32 key = mKeys[handle.value()];
+                if(key < mCapacity)
+                {
+                    return &mContainer.get(key);
+                }
+                else
+                {
+                    return nullptr;
+                }
+            }
+
+            bool Get(HandleType handle, DataType & data) const
+            {
+                if(handle.value()>=mKeys.size())
+                    return false;
+
+                u32 key = mKeys[handle.value()];
+                if(key < mCapacity)
+                {
+                    data = mContainer.get(key);
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            bool Set(HandleType handle, const DataType & data)
+            {
+                if(handle.value()>=mKeys.size())
+                    return false;
+
+                u32 key = mKeys[handle.value()];
+                if(key < mCapacity)
+                {
+                    mContainer.get(key) = data;
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            bool IsFull()
+            {
+                return Count() >= mCapacity;
+            }
+
+            u32 KeySize()
+            {
+                return mKeys.size();
+            }
+
+            u32 Size()
+            {
+                return mContainer.data.size();
+            }
+
+            u32 FreeQueueSize()
+            {
+                return mContainer.freed.size();
+            }
+
+            u32 Count()
+            {
+                return Size() - FreeQueueSize();
+            }
+        private:
+            u32 mCapacity = HandleType::kInvalidHandle;
+            std::vector<u32> mKeys;
+            RecycleArray<DataType> mContainer;
     };
 }

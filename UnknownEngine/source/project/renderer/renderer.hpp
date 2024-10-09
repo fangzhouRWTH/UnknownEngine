@@ -7,6 +7,7 @@
 #include "rendererHandles.hpp"
 
 #include "core/math.hpp"
+#include "core/base.hpp"
 
 #include <memory>
 #include <unordered_map>
@@ -14,6 +15,7 @@
 #include <span>
 
 // #define API_OPENGL
+
 #define API_VULKAN
 
 namespace unknown::renderer
@@ -25,6 +27,10 @@ namespace unknown::renderer
     public:
         ~RenderEngine();
         static std::shared_ptr<RenderEngine> Get();
+        void Initialize();
+        void * GetCore();
+
+        GPUMeshBufferHandle UploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices);
 
     private:
         RenderEngine();
@@ -40,7 +46,8 @@ namespace unknown::renderer
         // static ResourceMap<TextureHandle, TextureInfos> mTextureMap;
 
     private:
-       //std::unique_ptr<GraphicAPI> mDetail = nullptr;
+        bool mInitialized = false;
+        std::unique_ptr<GraphicAPI> mDetail = nullptr;
     };
 
     // class GraphicBackend

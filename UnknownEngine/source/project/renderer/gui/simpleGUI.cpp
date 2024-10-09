@@ -15,11 +15,14 @@
 
 namespace unknown::renderer::ui
 {
-    void IMGUI_VULKAN_GLFW::InitializeVulkan(vulkan::VulkanCore *vkCore, void *windowPtr, bool install_callbacks)
+    //void IMGUI_VULKAN_GLFW::InitializeVulkan(vulkan::VulkanCore *vkCore, void *windowPtr, bool install_callbacks)
+    void IMGUI_VULKAN_GLFW::InitializeVulkan(void * core, void *windowPtr, bool install_callbacks)
     {
         // 1: create descriptor pool for IMGUI
         //  the size of the pool is very oversize, but it's copied from imgui demo
         //  itself.
+        vulkan::VulkanCore* vkCore = static_cast<vulkan::VulkanCore*>(core);
+        assert(vkCore);
         VkDescriptorPoolSize pool_sizes[] = {{VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
                                              {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
                                              {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000},

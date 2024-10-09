@@ -16,7 +16,7 @@ namespace unknown::renderer::ui
         public:
         //SimpleIMGUI(){}
         //~SimpleIMGUI(){}
-        static void InitializeVulkan(vulkan::VulkanCore* vkCore, void* windowPtr, bool install_callbacks);
+        static void InitializeVulkan(void * vkCore, void* windowPtr, bool install_callbacks);
         static void ImplGLFWProcessEvent();
         static void NewFrame();
         static void VkDrawImgui(vulkan::VulkanCore* vkCore, VkCommandBuffer cmd, VkImageView targetImageView);

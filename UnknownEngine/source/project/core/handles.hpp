@@ -54,3 +54,15 @@ private:
 
 // template <typename HandleType>
 // u32 Handle<HandleType>::_current = 0u;
+
+template<typename HType>
+struct HandleTemplate
+{
+    const static u32 kInvalidHandle = 0xFFFFFFFF;
+    void operator=(const HandleTemplate & other){h = other.h;}
+    u32 & value() {return h;}
+    const u32 & value() const {return h;}
+    bool valid() const {return h < kInvalidHandle;}
+protected:
+    u32 h = kInvalidHandle;
+};

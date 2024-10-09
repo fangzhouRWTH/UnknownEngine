@@ -101,8 +101,13 @@ namespace unknown
 
             // Temp Vulkan Test
             auto windowPtr = FrameworkManager::GetWindowRawPointer();
-            mVkCore.init(windowPtr);
-            renderer::ui::IMGUI_VULKAN_GLFW::InitializeVulkan(&mVkCore, windowPtr, true);
+            auto render = renderer::RenderEngine::Get();
+            //mVkCore.init(windowPtr);
+            auto corePtr = render->GetCore();
+            mVkCore = static_cast<renderer::vulkan::VulkanCore*>(corePtr);
+            assert(mVkCore);
+            mVkCore->init(windowPtr);
+            renderer::ui::IMGUI_VULKAN_GLFW::InitializeVulkan(mVkCore, windowPtr, true);
         }
 
         // Renderer
@@ -226,12 +231,12 @@ namespace unknown
 
             mpEcsManager->Update(context);
 
-            mVkCore.test_try_resize_swapchain(windowHeight,windowWidth);
+            mVkCore->test_try_resize_swapchain(windowHeight,windowWidth);
 
             if (ImGui::Begin("background"))
             {
-                auto &backgroundEffects = mVkCore.test_get_backgroud_effects();
-                auto &currentBackgroundEffect = mVkCore.test_get_backgroud_effect_index();
+                auto &backgroundEffects = mVkCore->test_get_backgroud_effects();
+                auto &currentBackgroundEffect = mVkCore->test_get_backgroud_effect_index();
                 auto &selected = backgroundEffects[currentBackgroundEffect];
 
                 ImGui::Text("Selected effect: ", selected.name);
@@ -248,7 +253,7 @@ namespace unknown
 
             renderer::ui::IMGUI_VULKAN_GLFW::Render();
             // Temp Vulkan Test
-            mVkCore.draw(windowWidth, windowHeight, context);
+            mVkCore->draw(windowWidth, windowHeight, context);
 
             FrameworkManager::PostUpdate();
         }
@@ -258,7 +263,7 @@ namespace unknown
     {
         mpApp->Shutdown();
         //  Temp Vulkan Test
-        mVkCore.cleanup();
+        mVkCore->cleanup();
 
         FrameworkManager::TerminateMain();
     }

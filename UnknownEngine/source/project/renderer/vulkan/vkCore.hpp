@@ -245,6 +245,8 @@ namespace unknown::renderer::vulkan
 
         void draw(u32 width, u32 height, const EngineContext &context);
 
+        void push_dynamic_render_object(RenderObject renderObject);
+
         std::vector<ComputeEffect> &test_get_backgroud_effects() { return backgroundEffects; }
 
         i32 &test_get_backgroud_effect_index() { return currentBackgroundEffect; }

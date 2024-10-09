@@ -90,7 +90,9 @@ namespace unknown::asset
         bool uploaded = false;
         h64 gpuHash;
         //todo
-        GPUMeshBuffers buffers;
+        //GPUMeshBuffers buffers;
+        renderer::GPUMeshBufferHandle meshBufferHandle;
+        
     };
 
     struct MeshDataHandle : public Handle<MeshDataHandle>

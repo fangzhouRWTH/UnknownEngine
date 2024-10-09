@@ -25,6 +25,8 @@ namespace unknown
         private:
             bool loadScene();
             std::shared_ptr<IApplication> mpApp;
-            renderer::vulkan::VulkanCore mVkCore;
+            //temp
+            //renderer::vulkan::VulkanCore mVkCore;
+            renderer::vulkan::VulkanCore* mVkCore;
     };
 }

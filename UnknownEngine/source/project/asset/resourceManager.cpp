@@ -4,6 +4,7 @@
 #include "configuration/globalValues.hpp"
 
 #include "renderer/vulkan/vkCore.hpp"
+#include "renderer/renderer.hpp"
 
 #include "utils/assimpHelper.hpp"
 
@@ -263,7 +264,8 @@ namespace unknown::asset
                     mr->vertices = *pData.vertices;
                     mr->indices = *pData.indices;
                     // todo
-                    mr->buffers = vkCore->uploadMesh(mr->indices, mr->vertices);
+                    //mr->buffers = vkCore->uploadMesh(mr->indices, mr->vertices);
+                    mr->meshBufferHandle = renderer::RenderEngine::Get()->UploadMesh(mr->indices, mr->vertices);
                     mr->uploaded = true;
                 }
                 break;

@@ -171,20 +171,9 @@ namespace unknown::renderer::vulkan
             //asset::ResourceManager::DebugPrintAssetHierarchy(modelPath);
 
             h64 h = math::HashString(modelPath);
-            //rm->AddResourceMetaData(modelPath, asset::ResourceType::Model);
-            //auto b = rm->LoadModelData(h);
+
             auto sceneData = rm->GetSceneTree(h);
-            // // test
-            // auto sd = rm->GetSceneData(h);
 
-            // auto op = [](std::shared_ptr<asset::ISceneContent> parent, std::shared_ptr<asset::ISceneContent> child) -> void
-            // {
-            //     child->transform = parent->transform * child->transform;
-            //     // INFO_LOG("update X : {}, Y : {}, Z : {}", child->transform.col(3).x(), child->transform.col(3).y(), child->transform.col(3).z())
-            // };
-            // sd->scene.RecursiveOperationDownward(op);
-
-            // auto nodes = sd->scene.GetTopologicContentOrder();
             if(sceneData)
             {
                 // temp
@@ -217,8 +206,11 @@ namespace unknown::renderer::vulkan
 
                             meshInfo.surface.startIndex = 0u;
                             meshInfo.surface.count = meshData->indices.size();
-                            meshInfo.meshBuffer = meshData->buffers;
-                            mMeshBufferBank.meshInfos.insert({meshInfo.meshDataHandle, meshInfo});
+
+                            //todo
+                            //meshData->meshBufferHandle;
+                            //meshInfo.meshBuffer = meshData->buffers;
+                            //mMeshBufferBank.meshInfos.insert({meshInfo.meshDataHandle, meshInfo});
                             //sceneMesh->meshGpuInfoHash = meshHandle;
 
                             RenderObject def;
@@ -231,7 +223,7 @@ namespace unknown::renderer::vulkan
 
                             def.vertexBufferAddress = meshInfo.meshBuffer.vertexBufferAddress;
 
-                            mainDrawContext.OpaqueSurfaces.push_back(def);
+                            //mainDrawContext.OpaqueSurfaces.push_back(def);
                         }
                     }
                 };
@@ -242,95 +234,6 @@ namespace unknown::renderer::vulkan
                 Mat4f rTransform = rEmpty->transform;
                 //stRecursive(sceneData,sceneData->RootIndex(),rTransform);
             }
-
-            // u32 count = 0u;
-            // for (auto n : nodes)
-            // {
-            //     INFO_LOG("X : {}, Y : {}, Z : {}", n->transform.col(3).x(), n->transform.col(3).y(), n->transform.col(3).z())
-            //     if (n->type == asset::SceneContentType::Mesh)
-            //     {
-            //         count++;
-            //         auto sceneMesh = std::dynamic_pointer_cast<asset::SceneMesh>(n);
-            //         assert(sceneMesh);
-            //         GPUMeshInfo meshInfo;
-            //         auto meshHandle = sceneMesh->meshDataHash;
-
-            //         if (mMeshBufferBank.meshInfos.find(meshHandle) != mMeshBufferBank.meshInfos.end())
-            //         {
-            //             sceneMesh->meshGpuInfoHash = meshHandle;
-            //         }
-            //         else
-            //         {
-            //             auto meshData = rm->GetMeshData(meshHandle);
-            //             meshInfo.meshDataHandle = meshHandle;
-            //             meshInfo.surface.startIndex = 0u;
-            //             meshInfo.surface.count = meshData->indices.size();
-            //             meshInfo.meshBuffer = uploadMesh(meshData->indices, meshData->vertices);
-            //             mMeshBufferBank.meshInfos.insert({meshInfo.meshDataHandle, meshInfo});
-            //             sceneMesh->meshGpuInfoHash = meshHandle;
-            //         }
-
-            //         Mat4f nodeMatrix = sceneMesh->transform;
-            //         RenderObject def;
-            //         def.indexCount = meshInfo.surface.count;
-            //         def.firstIndex = meshInfo.surface.startIndex;
-            //         def.indexBuffer = meshInfo.meshBuffer.indexBuffer.buffer;
-            //         def.material = &defaultData;
-
-            //         def.transform = nodeMatrix;
-            //         def.vertexBufferAddress = meshInfo.meshBuffer.vertexBufferAddress;
-
-            //         mainDrawContext.OpaqueSurfaces.push_back(def);
-            //     }
-            // }
-
-            // //asset::MeshRawData rData;
-            // //asset::AssetManager::LoadMeshRawData(rData, assetInfo);
-            // asset::SceneRawData rData;
-            // asset::AssetManager::LoadSceneRawData(rData, assetInfo);
-
-            // u32 meshCount = rData.subMeshIndicesRanges.size();
-            // // testMeshes.resize(meshCount);
-            // testMeshes.resize(1);
-            // for (auto i = 0u; i < 1; i++)
-            // {
-            //     auto rangeI = rData.subMeshIndicesRanges[i];
-            //     auto rangeV = rData.subMeshVerticesRanges[i];
-            //     asset::MeshAsset newMesh;
-            //     // asset::GeoSurface newSurface{rangeI.first,rangeI.second - rangeI.first};
-            //     asset::GeoSurface newSurface{0, rData.indices.size()};
-            //     newMesh.surfaces.resize(1);
-            //     newMesh.surfaces[0] = newSurface;
-            //     newMesh.meshBuffers = uploadMesh(
-            //         rData.indices,
-            //         rData.vertices);
-            //     // newMesh.meshBuffers = uploadMesh(
-            //     //     std::span<u32>(rData.indices.begin(),rangeI.second-rangeI.first),
-            //     //     std::span<asset::VkVertex>(rData.vertices.begin(),rangeV.second - rangeV.first));
-
-            //     testMeshes[0] = std::make_shared<asset::MeshAsset>(std::move(newMesh));
-            //     auto &mesh = testMeshes[0];
-            //     auto &s = mesh->surfaces[0];
-            // temps
-            // }
-
-            // for (auto meshInfo : mMeshBufferBank.meshInfos)
-            // {
-            //     const auto &mesh = meshInfo.second;
-            //     Mat4f nodeMatrix = Mat4f::Identity();
-            //     RenderObject def;
-            //     def.indexCount = mesh.surface.count;
-            //     def.firstIndex = mesh.surface.startIndex;
-            //     def.indexBuffer = mesh.meshBuffer.indexBuffer.buffer;
-            //     def.material = &defaultData;
-
-            //     def.transform = nodeMatrix;
-            //     def.vertexBufferAddress = mesh.meshBuffer.vertexBufferAddress;
-
-            //     mainDrawContext.OpaqueSurfaces.push_back(def);
-            // }
-            auto a = 123;
-            a++;
         }
     }
 
@@ -459,51 +362,11 @@ namespace unknown::renderer::vulkan
             vkCmdDrawIndexed(cmd, draw.indexCount, 1, draw.firstIndex, 0, 0);
         }
 
-        {
-            // GPUDrawPushConstants push_constants;
-
-            // const auto &cInfo = context.cameraInfo[0];
-
-            // Vec3f eye = Vec3f(cInfo.transform.col(3)[0], cInfo.transform.col(3)[1], cInfo.transform.col(3)[2]);
-            // Vec3f center = eye + Vec3f(cInfo.forward.x(), cInfo.forward.y(), cInfo.forward.z());
-            // Vec3f up = Vec3f(cInfo.up.x(), cInfo.up.y(), cInfo.up.z());
-            // auto view = math::LookAt(eye, center, up);
-            // notice here far/near is reverted
-            // auto projection = math::PerspectiveVK(cInfo.fov_radian, (float)_drawExtent.width / (float)_drawExtent.height, cInfo.near, cInfo.far);
-            // projection.col(1).y() *= -1.f;
-            // push_constants.worldMatrix = projection * view;
-            // INFO_LOG("x:[{}] y:[{}] z:[{}]",eye.x(),eye.y(),eye.z());
-
-            // push_constants.vertexBuffer = testMeshes[0]->meshBuffers.vertexBufferAddress;
-
-            // vkCmdPushConstants(cmd, _meshPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(GPUDrawPushConstants), &push_constants);
-            // vkCmdBindIndexBuffer(cmd, testMeshes[0]->meshBuffers.indexBuffer.buffer, 0, VK_INDEX_TYPE_UINT32);
-
-            // vkCmdDrawIndexed(cmd, testMeshes[0]->surfaces[0].count, 1, testMeshes[0]->surfaces[0].startIndex, 0, 0);
-            // vkCmdDraw(cmd, 3, 1, 0, 0);
-        }
-
         vkCmdEndRendering(cmd);
     }
 
     void VulkanCore::test_update_scene(const EngineContext &context)
     {
-        // mainDrawContext.OpaqueSurfaces.clear();
-
-        // for (auto &m : loadedNodes)
-        // {
-        //     m.second->Draw(glm::mat4{1.f}, mainDrawContext);
-        // }
-
-        // for (int x = -3; x < 3; x++)
-        // {
-
-        //     glm::mat4 scale = glm::scale(glm::vec3{0.2});
-        //     glm::mat4 translation = glm::translate(glm::vec3{x, 1, 0});
-
-        //     loadedNodes["Cube"]->Draw(translation * scale, mainDrawContext);
-        // }
-
         const auto &cInfo = context.cameraInfo[0];
 
         Vec3f eye = Vec3f(cInfo.transform.col(3)[0], cInfo.transform.col(3)[1], cInfo.transform.col(3)[2]);
@@ -633,6 +496,11 @@ namespace unknown::renderer::vulkan
 
         // increase the number of frames drawn
         _frameNumber++;
+    }
+
+    void VulkanCore::push_dynamic_render_object(RenderObject renderObject)
+    {
+        mainDrawContext.OpaqueSurfaces.push_back(renderObject);
     }
 
     void VulkanCore::init_vulkan()
@@ -1301,12 +1169,12 @@ namespace unknown::renderer::vulkan
         vmaDestroyBuffer(_allocator, buffer.buffer, buffer.allocation);
     }
 
-    GPUMeshBufferHandle VulkanCore::createGPUMesh(std::span<uint32_t> indices, std::span<Vertex> vertices)
-    {
-        GPUMeshBuffers meshBuffers = uploadMesh(indices, vertices);
-        return GPUMeshBufferHandle();
-        // return mGPUMeshBuffersMap.AddResource(meshBuffers);
-    }
+    // GPUMeshBufferHandle VulkanCore::createGPUMesh(std::span<uint32_t> indices, std::span<Vertex> vertices)
+    // {
+    //     GPUMeshBuffers meshBuffers = uploadMesh(indices, vertices);
+    //     return GPUMeshBufferHandle();
+    //     // return mGPUMeshBuffersMap.AddResource(meshBuffers);
+    // }
 
     GPUMeshBuffers VulkanCore::uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices)
     {
