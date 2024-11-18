@@ -32,8 +32,11 @@
 
 #include <memory>
 
+
 namespace unknown
 {
+    std::vector<renderer::RenderObject> rObjects;
+
     void DefaultPlayerController(unknown::ecs::CTransform *transformComponent, const unknown::input::KeyEvents &keyEvent,
                                  const unknown::input::CursorPosition &cursor, float dt)
     {
@@ -160,10 +163,60 @@ namespace unknown
             mpResourceManager = std::make_shared<asset::ResourceManager>(mpRenderer);
             mpResourceManager->Initialize();
 
-            std::string modelPath = "/home/fzl/workspace/git_projects/RenderEngineV0/assets/models/test/three_boxes.glb";
+            std::string modelPath = "C:/Users/franz/Downloads/Documents/Git/UnknownEngine/UnknownEngine/UnknownEngine/assets/models/structure/structure_.glb";
             asset::ResourceManager::DebugPrintAssetHierarchy(modelPath);
-
+            mpResourceManager->AddResourceMetaData(modelPath, asset::ResourceType::Model);
             h64 h = math::HashString(modelPath);
+
+            bool load = mpResourceManager->LoadModelData(h);
+
+            auto sceneData = mpResourceManager->GetSceneTree(h);
+            
+            rObjects.clear();
+
+            if(sceneData)
+            {
+                // temp
+                std::function<void(std::shared_ptr<SceneTree>, SceneNodeIndex, Mat4f)> stRecursive;
+                stRecursive = [&](std::shared_ptr<SceneTree> tree, SceneNodeIndex parent, Mat4f transform)
+                {
+                    std::vector<SceneNodeIndex> childs;
+                    tree->GetChilds(parent, childs);
+                    for (auto ci : childs)
+                    {
+                        auto nPtr = tree->GetNode(ci);
+                        assert(nPtr);
+
+                        if (std::shared_ptr<SceneEmptyNode> eNode = std::dynamic_pointer_cast<SceneEmptyNode>(nPtr); eNode)
+                        {
+                            Mat4f newTransform = eNode->transform * transform;
+                            //Mat4f newTransform = Mat4f::Identity();
+                            stRecursive(tree, ci, newTransform);
+                        }
+                        else if (std::shared_ptr<SceneMeshNode> mNode = std::dynamic_pointer_cast<SceneMeshNode>(nPtr); mNode)
+                        {
+                            // draw
+                            h64 meshHash = mNode->data.ResourceHash;
+                            std::shared_ptr<asset::MeshData> meshData = mpResourceManager->GetMeshData(meshHash);
+                            if (!meshData || !meshData->uploaded)
+                                continue;
+
+                            renderer::RenderObject rObject;
+                            rObject.meshBufferHandle = meshData->meshBufferHandle;
+                            rObject.transform = transform;
+                            rObject.indicesCount = meshData->indices.size();
+
+                            rObjects.push_back(rObject);
+                        }
+                    }
+                };
+
+                auto rNode = sceneData->GetNode(sceneData->RootIndex());
+                auto rEmpty = std::dynamic_pointer_cast<SceneEmptyNode>(rNode);
+                assert(rEmpty);
+                Mat4f rTransform = rEmpty->transform;
+                stRecursive(sceneData,sceneData->RootIndex(),rTransform);
+            }
         }
 
         // App Initialize
@@ -231,6 +284,8 @@ namespace unknown
 
             renderer::ui::IMGUI_VULKAN_GLFW::Render();
             // Temp Vulkan Test
+            
+            mpRenderer->PushRenderObjects(rObjects);
             mpRenderer->Frame({windowWidth,windowHeight,context});
 
             FrameworkManager::PostUpdate();

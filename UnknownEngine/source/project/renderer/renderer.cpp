@@ -177,6 +177,11 @@ void RenderEngine::TryResize(u32 width, u32 height)
     mDetail->try_resize(width,height);
 }
 
+void RenderEngine::PushRenderObjects(std::span<RenderObject> objects) 
+{
+    mDetail->push_render_objects(objects);
+}
+
 void RenderEngine::Frame(FrameInfo info) 
 {
     mDetail->frame(info.width,info.height,info.context);

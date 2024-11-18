@@ -166,11 +166,11 @@ namespace unknown::renderer::vulkan
             // rm->Initialize();
             // // todo temp
             // rm->SetRenderBackend(this);
-            std::string modelPath = "/home/fzl/workspace/git_projects/RenderEngineV0/UnknownEngine/assets/models/structure/structure_.glb";
+            //std::string modelPath = "/home/fzl/workspace/git_projects/RenderEngineV0/UnknownEngine/assets/models/structure/structure_.glb";
             // std::string modelPath = "/home/fzl/workspace/git_projects/RenderEngineV0/assets/models/test/three_boxes.glb";
             //asset::ResourceManager::DebugPrintAssetHierarchy(modelPath);
 
-            h64 h = math::HashString(modelPath);
+            //h64 h = math::HashString(modelPath);
 
             // auto sceneData = rm->GetSceneTree(h);
 
@@ -345,7 +345,7 @@ namespace unknown::renderer::vulkan
         writer.write_buffer(0, gpuSceneDataBuffer.buffer, sizeof(GPUSceneData), 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
         writer.update_set(_device, globalDescriptor);
 
-        for (const RenderObject &draw : mainDrawContext.OpaqueSurfaces)
+        for (const VulkanRenderObject &draw : mainDrawContext.OpaqueSurfaces)
         {
 
             vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, draw.material->pipeline->pipeline);
@@ -496,9 +496,12 @@ namespace unknown::renderer::vulkan
 
         // increase the number of frames drawn
         _frameNumber++;
+
+        //todo MARK
+        mainDrawContext.OpaqueSurfaces.clear();
     }
 
-    void VulkanCore::push_dynamic_render_object(RenderObject renderObject)
+    void VulkanCore::push_dynamic_render_object(VulkanRenderObject renderObject)
     {
         mainDrawContext.OpaqueSurfaces.push_back(renderObject);
     }

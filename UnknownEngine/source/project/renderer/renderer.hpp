@@ -36,6 +36,7 @@ namespace unknown::renderer
         virtual void Initialize(const RendererInitInfo & info) = 0;
         virtual void ShutDown() = 0;
         virtual void TryResize(u32 width, u32 height) = 0;
+        virtual void PushRenderObjects(std::span<RenderObject> objects) = 0;
         virtual void Frame(FrameInfo info) = 0;
         virtual void * GetCore() = 0;
         virtual GPUMeshBufferHandle UploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices) = 0;
@@ -55,6 +56,7 @@ namespace unknown::renderer
         virtual void Initialize(const RendererInitInfo & info) override;
         virtual void ShutDown() override;
         virtual void TryResize(u32 width, u32 height) override;
+        virtual void PushRenderObjects(std::span<RenderObject> objects);
         virtual void Frame(FrameInfo info) override;
         virtual void * GetCore() override;
 

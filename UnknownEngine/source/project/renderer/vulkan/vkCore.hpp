@@ -106,7 +106,7 @@ namespace unknown::renderer::vulkan
     };
 
     //> renderobject
-    struct RenderObject
+    struct VulkanRenderObject
     {
         uint32_t indexCount;
         uint32_t firstIndex;
@@ -120,7 +120,7 @@ namespace unknown::renderer::vulkan
 
     struct DrawContext
     {
-        std::vector<RenderObject> OpaqueSurfaces;
+        std::vector<VulkanRenderObject> OpaqueSurfaces;
     };
     //< renderobject
 
@@ -245,7 +245,7 @@ namespace unknown::renderer::vulkan
 
         void draw(u32 width, u32 height, const EngineContext &context);
 
-        void push_dynamic_render_object(RenderObject renderObject);
+        void push_dynamic_render_object(VulkanRenderObject renderObject);
 
         std::vector<ComputeEffect> &test_get_backgroud_effects() { return backgroundEffects; }
 

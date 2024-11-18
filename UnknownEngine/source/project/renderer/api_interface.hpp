@@ -2,6 +2,7 @@
 #include "rendererHandles.hpp"
 #include "core/bit.hpp"
 #include "core/base.hpp"
+#include "core/math.hpp"
 
 #include <span>
 
@@ -115,6 +116,14 @@ namespace unknown::renderer
         Color_Depth,
     };
 
+    struct RenderObject
+    {
+        GPUMeshBufferHandle meshBufferHandle;
+        Mat4f transform;
+        u32 indicesCount;
+        //material
+    };
+
     class GraphicAPI
     {
     public:
@@ -124,6 +133,8 @@ namespace unknown::renderer
         virtual void try_resize(u32 width, u32 height) = 0;
         virtual void * get_core() = 0;
 
+
+        virtual void push_render_objects(std::span<RenderObject> objects) = 0;
         virtual void frame(u32 width, u32 height, EngineContext context) = 0;
         // virtual ProgramHandle create_shader(const char *vsCode, const char *fsCode) = 0;
         // virtual TextureHandle create_texture_2d(u32 width, u32 height, byte *data, ImageFormat format) = 0;
