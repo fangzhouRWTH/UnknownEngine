@@ -4,7 +4,6 @@ log/
 compile_commands.json
 CMakeUserPresets.json
 
-UnknownEngine/assets/models/structure/
 UnknownEngine/source/external/IMGUI/imgui/
 
 *.spv
