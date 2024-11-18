@@ -10,7 +10,7 @@ namespace unknown::renderer::opengl
     class API_OpenGL : public GraphicAPI
     {
     public:
-        virtual void initialize() override;
+        virtual void initialize(const RendererInitInfo & info) override;
         virtual void shutdown() override;
 
         virtual ProgramHandle create_shader(const char *vsCode, const char *fsCode) override;
@@ -71,7 +71,7 @@ namespace unknown::renderer::opengl
         VertexLayout sDefaultVertexLayout;
     };
 
-    void API_OpenGL::initialize()
+    void API_OpenGL::initialize(const RendererInitInfo & info)
     {
         sDefaultVertexLayout.begin()
             .add(VertexElement::Position3f)

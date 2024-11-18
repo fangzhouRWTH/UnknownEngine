@@ -8,6 +8,12 @@
 #include <string>
 #include <unordered_map>
 
+namespace unknown::renderer
+{
+    // TODO Temp
+    class IRenderer;
+}
+
 namespace unknown::renderer::vulkan
 {
     // TODO Temp
@@ -61,7 +67,9 @@ namespace unknown::asset
     {
     public:
         static void DebugPrintAssetHierarchy(std::string_view assetPath);
-        static std::shared_ptr<ResourceManager> Get();
+        //static std::shared_ptr<ResourceManager> Get();
+
+        ResourceManager(std::shared_ptr<renderer::IRenderer> renderer) : mpRenderer(renderer) {}
 
         std::shared_ptr<SceneTree> GetSceneTree(h64 hash);
         std::shared_ptr<MeshData> GetMeshData(h64 hash);
@@ -69,19 +77,21 @@ namespace unknown::asset
         bool AddResourceMetaData(std::string_view stringView, ResourceType type);
         bool LoadModelData(h64 hash);
 
-        void SetRenderBackend(renderer::vulkan::VulkanCore *vkCore) { mVkCore = vkCore; }
+        //void SetRenderBackend(renderer::vulkan::VulkanCore *vkCore) { mVkCore = vkCore; }
 
         void Initialize();
 
     private:
-        ResourceManager() {}
-        static std::shared_ptr<ResourceManager> sInstance;
+        //ResourceManager() {}
+        //static std::shared_ptr<ResourceManager> sInstance;
+
+        std::shared_ptr<renderer::IRenderer> mpRenderer;
 
         MeshResourceBank mMeshResource;
         SceneResourceBank mSceneResource;
 
         std::unordered_map<h64, ResourceMetaData> mResourceMetaDataMap;
-        renderer::vulkan::VulkanCore *mVkCore = nullptr;
+        //renderer::vulkan::VulkanCore *mVkCore = nullptr;
 
         bool mbInitialized = false;
     };

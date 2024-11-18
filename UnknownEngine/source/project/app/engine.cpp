@@ -99,23 +99,22 @@ namespace unknown
             fInfo.height = 1080u;
             FrameworkManager::Initialize(fInfo);
 
+            renderer::RendererInitInfo rInfo;
+            rInfo.windowPtr = FrameworkManager::GetWindowRawPointer();
+
             // Temp Vulkan Test
-            auto windowPtr = FrameworkManager::GetWindowRawPointer();
-            auto render = renderer::RenderEngine::Get();
-            //mVkCore.init(windowPtr);
-            auto corePtr = render->GetCore();
-            mVkCore = static_cast<renderer::vulkan::VulkanCore*>(corePtr);
-            assert(mVkCore);
-            mVkCore->init(windowPtr);
-            renderer::ui::IMGUI_VULKAN_GLFW::InitializeVulkan(mVkCore, windowPtr, true);
+            mpRenderer = std::make_shared<renderer::RenderEngine>(renderer::EGraphicAPI::Vulkan);
+            mpRenderer->Initialize(rInfo);
+
+            renderer::ui::IMGUI_VULKAN_GLFW::InitializeVulkan(
+                mpRenderer->GetCore(), 
+                FrameworkManager::GetWindowRawPointer(), 
+                true);
         }
 
         // Renderer
         {
-        //     renderer::RenderStates states;
-        //     states.set(renderer::RenderStates::State::DepthTest);
-        //     states.set(renderer::RenderStates::State::BackCulling);
-        //     renderer::GraphicBackend::SetRenderStates(states);
+
         }
 
         // ECS
@@ -158,34 +157,13 @@ namespace unknown
 
         // Asset Manager
         {
-            // auto rm = asset::ResourceManager::Get();
-            // std::string modelPath = "/home/fzl/workspace/git_projects/RenderEngineV0/assets/models/test/three_boxes.glb";
-            // h64 h = math::HashString(modelPath);
-            // rm->AddResourceMetaData(modelPath,asset::ResourceType::Model);
-            // auto b = rm->LoadModelData(h);
+            mpResourceManager = std::make_shared<asset::ResourceManager>(mpRenderer);
+            mpResourceManager->Initialize();
 
-            // //test
-            // auto sd = rm->GetSceneData(h);
-            // if(sd)
-            // {
-            //     u32 a = 0u;
-            //     a++;
-            // }
-            // auto nodes = sd->scene.GetTopologicContentOrder();
-            // for(auto n : nodes)
-            // {
-            //     if(n->type==asset::SceneContentType::Mesh)
-            //     {
-            //         auto m = std::dynamic_pointer_cast<asset::SceneMesh>(n);
-            //         auto mh = m->meshDataHash;
-            //         auto md = rm->GetMeshData(mh);
-            //         auto vs = md->vertices.size();
-            //         auto is = md->indices.size();
-            //     }
-            // }
-            //asset::AssetManager::Initialize();
-            //asset::AssetsManager::Initialize();
-            //asset::AssetsManager::Get()->GetMeshAsset("box_sphere.fbx");
+            std::string modelPath = "/home/fzl/workspace/git_projects/RenderEngineV0/assets/models/test/three_boxes.glb";
+            asset::ResourceManager::DebugPrintAssetHierarchy(modelPath);
+
+            h64 h = math::HashString(modelPath);
         }
 
         // App Initialize
@@ -231,29 +209,29 @@ namespace unknown
 
             mpEcsManager->Update(context);
 
-            mVkCore->test_try_resize_swapchain(windowHeight,windowWidth);
+            mpRenderer->TryResize(windowHeight,windowWidth);
 
             if (ImGui::Begin("background"))
             {
-                auto &backgroundEffects = mVkCore->test_get_backgroud_effects();
-                auto &currentBackgroundEffect = mVkCore->test_get_backgroud_effect_index();
-                auto &selected = backgroundEffects[currentBackgroundEffect];
+                //auto &backgroundEffects = mVkCore->test_get_backgroud_effects();
+                //auto &currentBackgroundEffect = mVkCore->test_get_backgroud_effect_index();
+                //auto &selected = backgroundEffects[currentBackgroundEffect];
 
-                ImGui::Text("Selected effect: ", selected.name);
+                //ImGui::Text("Selected effect: ", selected.name);
 
-                ImGui::SliderInt("Effect Index", &currentBackgroundEffect, 0, backgroundEffects.size() - 1);
+                //ImGui::SliderInt("Effect Index", &currentBackgroundEffect, 0, backgroundEffects.size() - 1);
 
-                ImGui::InputFloat4("data1", (float *)&selected.data.data1);
-                ImGui::InputFloat4("data2", (float *)&selected.data.data2);
-                ImGui::InputFloat4("data3", (float *)&selected.data.data3);
-                ImGui::InputFloat4("data4", (float *)&selected.data.data4);
+                //ImGui::InputFloat4("data1", (float *)&selected.data.data1);
+                //ImGui::InputFloat4("data2", (float *)&selected.data.data2);
+                //ImGui::InputFloat4("data3", (float *)&selected.data.data3);
+                //ImGui::InputFloat4("data4", (float *)&selected.data.data4);
 
                 ImGui::End();
             }
 
             renderer::ui::IMGUI_VULKAN_GLFW::Render();
             // Temp Vulkan Test
-            mVkCore->draw(windowWidth, windowHeight, context);
+            mpRenderer->Frame({windowWidth,windowHeight,context});
 
             FrameworkManager::PostUpdate();
         }
@@ -263,7 +241,8 @@ namespace unknown
     {
         mpApp->Shutdown();
         //  Temp Vulkan Test
-        mVkCore->cleanup();
+        //mVkCore->cleanup();
+        mpRenderer->ShutDown();
 
         FrameworkManager::TerminateMain();
     }

@@ -7,6 +7,17 @@
 namespace unknown
 {
     class IApplication;
+
+    namespace renderer
+    {
+        class IRenderer;
+    }
+
+    namespace asset
+    {
+        class ResourceManager;
+    }
+
     namespace ecs
     {
         class ECSManager;
@@ -22,11 +33,11 @@ namespace unknown
         private:
             std::shared_ptr<ecs::ECSManager> mpEcsManager;
             core::Clock mEngineClock;
+            
         private:
             bool loadScene();
             std::shared_ptr<IApplication> mpApp;
-            //temp
-            //renderer::vulkan::VulkanCore mVkCore;
-            renderer::vulkan::VulkanCore* mVkCore;
+            std::shared_ptr<renderer::IRenderer> mpRenderer;
+            std::shared_ptr<asset::ResourceManager> mpResourceManager;
     };
 }

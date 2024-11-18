@@ -1,6 +1,7 @@
 #pragma once
 #include "platform/type.hpp"
 #include "define/enums.hpp"
+#include "context/engineContext.hpp"
 
 #include "api_interface.hpp"
 #include "memory/resource.hpp"
@@ -22,20 +23,46 @@ namespace unknown::renderer
 {
     class Texture2D;
 
-    class RenderEngine
+    struct FrameInfo
+    {
+        u32 width;
+        u32 height;
+        EngineContext context;
+    };
+
+    class IRenderer
     {
     public:
-        ~RenderEngine();
-        static std::shared_ptr<RenderEngine> Get();
-        void Initialize();
-        void * GetCore();
+        virtual void Initialize(const RendererInitInfo & info) = 0;
+        virtual void ShutDown() = 0;
+        virtual void TryResize(u32 width, u32 height) = 0;
+        virtual void Frame(FrameInfo info) = 0;
+        virtual void * GetCore() = 0;
+        virtual GPUMeshBufferHandle UploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices) = 0;
+    };
 
-        GPUMeshBufferHandle UploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices);
+    enum class EGraphicAPI
+    {
+        Vulkan
+    };
+
+    class RenderEngine final : public IRenderer
+    {
+    public:
+        RenderEngine(EGraphicAPI api);
+        ~RenderEngine();
+        //static std::shared_ptr<RenderEngine> Get();
+        virtual void Initialize(const RendererInitInfo & info) override;
+        virtual void ShutDown() override;
+        virtual void TryResize(u32 width, u32 height) override;
+        virtual void Frame(FrameInfo info) override;
+        virtual void * GetCore() override;
+
+        virtual GPUMeshBufferHandle UploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices) override;
 
     private:
-        RenderEngine();
         // static std::shared_ptr<GraphicAPI> impl() { return sInstancePtr->mDetail; }
-        static std::shared_ptr<RenderEngine> sInstancePtr;
+        //static std::shared_ptr<RenderEngine> sInstancePtr;
 
         //ResourceTable<u32> resourceTest;
 
@@ -46,6 +73,7 @@ namespace unknown::renderer
         // static ResourceMap<TextureHandle, TextureInfos> mTextureMap;
 
     private:
+        const EGraphicAPI mAPI;
         bool mInitialized = false;
         std::unique_ptr<GraphicAPI> mDetail = nullptr;
     };

@@ -234,7 +234,7 @@ namespace unknown::asset
         file.close();
     }
 
-    void load_gltf(renderer::vulkan::VulkanCore *vkCore, std::string_view path, h64 hash, SceneResourceBank &sceneResource, MeshResourceBank &meshResource)
+    void load_gltf(std::shared_ptr<renderer::IRenderer> renderer, std::string_view path, h64 hash, SceneResourceBank &sceneResource, MeshResourceBank &meshResource)
     {
         ProcessFunction nodeProcessCallback = [&](ProcessType pType, ProcessData pData) -> ProcessResult
         {
@@ -265,7 +265,7 @@ namespace unknown::asset
                     mr->indices = *pData.indices;
                     // todo
                     //mr->buffers = vkCore->uploadMesh(mr->indices, mr->vertices);
-                    mr->meshBufferHandle = renderer::RenderEngine::Get()->UploadMesh(mr->indices, mr->vertices);
+                    mr->meshBufferHandle = renderer->UploadMesh(mr->indices, mr->vertices);
                     mr->uploaded = true;
                 }
                 break;
@@ -313,11 +313,11 @@ namespace unknown::asset
         debug_scene_graph_export(assetPath, output);
     }
 
-    std::shared_ptr<ResourceManager> ResourceManager::Get()
-    {
-        static std::shared_ptr<ResourceManager> sInstance(new ResourceManager);
-        return sInstance;
-    }
+    // std::shared_ptr<ResourceManager> ResourceManager::Get()
+    // {
+    //     static std::shared_ptr<ResourceManager> sInstance(new ResourceManager);
+    //     return sInstance;
+    // }
 
     // std::shared_ptr<SceneData> ResourceManager::GetSceneData(h64 hash)
     // {
@@ -384,7 +384,7 @@ namespace unknown::asset
             if (meta.type != ResourceType::Model)
                 return false;
 
-            load_gltf(mVkCore, meta.path, hash, mSceneResource, mMeshResource);
+            load_gltf(mpRenderer, meta.path, hash, mSceneResource, mMeshResource);
         }
         return false;
     }

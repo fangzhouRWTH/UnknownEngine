@@ -129,30 +129,57 @@ namespace unknown::renderer
 //         //return impl()->set_clear_color(color.x(), color.y(), color.z(), color.w());
 //     }
 
-RenderEngine::RenderEngine()
+RenderEngine::RenderEngine(EGraphicAPI api) : mAPI(api)
 {
-    #if defined(API_VULKAN)
-    mDetail=std::make_unique<vulkan::API_Vulkan>();
-    #endif
+    // #if defined(API_VULKAN)
+    // mDetail=std::make_unique<vulkan::API_Vulkan>();
+    // #endif
 }
 
 RenderEngine::~RenderEngine()
 {
 }
 
-std::shared_ptr<RenderEngine> RenderEngine::Get()
-{
-    static std::shared_ptr<RenderEngine> sInstancePtr(new RenderEngine);
+// std::shared_ptr<RenderEngine> RenderEngine::Get()
+// {
+//     static std::shared_ptr<RenderEngine> sInstancePtr(new RenderEngine);
 
-    return sInstancePtr;
-}
+//     return sInstancePtr;
+// }
 
-void RenderEngine::Initialize()
+void RenderEngine::Initialize(const RendererInitInfo & info)
 {
     if(!mInitialized)
     {
+        switch(mAPI)
+        {
+            case EGraphicAPI::Vulkan:
+                mDetail=std::make_unique<vulkan::API_Vulkan>();
+                break;
+            default:
+                assert(false);
+                break;
+        }
+
+        mDetail->initialize(info);
+
         mInitialized = true;
     }
+}
+
+void RenderEngine::ShutDown() 
+{
+    mDetail->shutdown();
+}
+
+void RenderEngine::TryResize(u32 width, u32 height) 
+{
+    mDetail->try_resize(width,height);
+}
+
+void RenderEngine::Frame(FrameInfo info) 
+{
+    mDetail->frame(info.width,info.height,info.context);
 }
 
 void *RenderEngine::GetCore()

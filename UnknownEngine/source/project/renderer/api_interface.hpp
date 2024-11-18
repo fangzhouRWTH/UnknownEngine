@@ -7,6 +7,11 @@
 
 namespace unknown::renderer
 {
+    struct RendererInitInfo
+    {
+        void* windowPtr = nullptr;
+    };
+
     struct RenderStates
     {
         enum class State : u32
@@ -113,9 +118,13 @@ namespace unknown::renderer
     class GraphicAPI
     {
     public:
-        virtual void initialize() = 0;
+        virtual void initialize(const RendererInitInfo & info) = 0;
         virtual void shutdown() = 0;
+
+        virtual void try_resize(u32 width, u32 height) = 0;
         virtual void * get_core() = 0;
+
+        virtual void frame(u32 width, u32 height, EngineContext context) = 0;
         // virtual ProgramHandle create_shader(const char *vsCode, const char *fsCode) = 0;
         // virtual TextureHandle create_texture_2d(u32 width, u32 height, byte *data, ImageFormat format) = 0;
         //virtual RenderElementHandle create_mesh(VertexLayout layout, float *vertices, u32 uSize, u32 *indices, u32 iSize) = 0;
