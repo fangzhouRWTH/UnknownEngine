@@ -1,5 +1,4 @@
 #pragma once
-//#include <nlohmann/json.hpp>
 #include <memory>
 #include <string>
 #include <fstream>
@@ -19,6 +18,11 @@ namespace unknown
 
     // private:
     // };
+    namespace asset
+    {
+        class IAssetManager;
+    }
+
     enum class SceneNodeType
     {
         Empty,
@@ -43,7 +47,7 @@ namespace unknown
 
     struct MeshNodeData
     {
-        h64 ResourceHash;
+        h64 AssetHash;
         h64 GPUResourceHash;
     };
 
@@ -76,27 +80,15 @@ namespace unknown
         const SceneNodeIndex mRootIndex = 0u;
     };
 
+    struct SceneLoaderContext
+    {
+        std::string sceneFilePath;
+        std::shared_ptr<asset::IAssetManager> managerPtr = nullptr;
+    };
+
     class SceneLoader
     {
     public:
-        static void LoadScene(std::string sceneFilePath)
-        {
-            // std::ifstream f(sceneFilePath);
-            // json data = json::parse(f);
-
-            // auto scene = data["scene"];
-            // auto entities = scene.find("entities");
-            // if (entities != scene.end())
-            // {
-            //     for (auto it = entities->begin(); it != entities->end(); it++)
-            //     {
-            //         auto name = it->find("name");
-            //         if (name != it->end())
-            //         {
-            //             std::cout << name.value() << std::endl;
-            //         }
-            //     }
-            // }
-        }
+        static void LoadScene(const SceneLoaderContext & context);
     };
 }

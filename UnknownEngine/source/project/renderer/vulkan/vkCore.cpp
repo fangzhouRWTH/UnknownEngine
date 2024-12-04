@@ -81,8 +81,8 @@ namespace unknown::renderer::vulkan
 
         // rectangle = uploadMesh(std::span{Suzanne_idx, Suzanne_idx_count}, std::span{Suzanne_vtx, Suzanne_vtx_count});
 
-        asset::RenderElementAssetInfo assetInfo;
-        assetInfo.path = config::model_folder_path + "test/three_boxes.glb";
+        //asset::RenderElementAssetInfo assetInfo;
+        //assetInfo.path = config::model_folder_path + "test/three_boxes.glb";
         // assetInfo.path = config::model_folder_path + "test/right_hand_axis.fbx";
         // assetInfo.path = config::model_folder_path + "backpack/backpack.obj";
 
@@ -162,79 +162,18 @@ namespace unknown::renderer::vulkan
         // load meshes
         {
             mainDrawContext.OpaqueSurfaces.clear();
-            // auto rm = asset::ResourceManager::Get();
-            // rm->Initialize();
-            // // todo temp
-            // rm->SetRenderBackend(this);
-            //std::string modelPath = "/home/fzl/workspace/git_projects/RenderEngineV0/UnknownEngine/assets/models/structure/structure_.glb";
-            // std::string modelPath = "/home/fzl/workspace/git_projects/RenderEngineV0/assets/models/test/three_boxes.glb";
-            //asset::ResourceManager::DebugPrintAssetHierarchy(modelPath);
-
-            //h64 h = math::HashString(modelPath);
-
-            // auto sceneData = rm->GetSceneTree(h);
-
-            // if(sceneData)
-            // {
-            //     // temp
-            //     float d = 0.0;
-            //     std::function<void(std::shared_ptr<SceneTree>, SceneNodeIndex, Mat4f)> stRecursive;
-            //     stRecursive = [&](std::shared_ptr<SceneTree> tree, SceneNodeIndex parent, Mat4f transform)
-            //     {
-            //         d += 10.0;
-            //         std::vector<SceneNodeIndex> childs;
-            //         tree->GetChilds(parent, childs);
-            //         for (auto ci : childs)
-            //         {
-            //             auto nPtr = tree->GetNode(ci);
-            //             assert(nPtr);
-
-            //             if (std::shared_ptr<SceneEmptyNode> eNode = std::dynamic_pointer_cast<SceneEmptyNode>(nPtr); eNode)
-            //             {
-            //                 Mat4f newTransform = eNode->transform * transform;
-            //                 //Mat4f newTransform = Mat4f::Identity();
-            //                 stRecursive(tree, ci, newTransform);
-            //             }
-            //             else if (std::shared_ptr<SceneMeshNode> mNode = std::dynamic_pointer_cast<SceneMeshNode>(nPtr); mNode)
-            //             {
-            //                 // draw
-            //                 GPUMeshInfo meshInfo;
-            //                 h64 meshHash = mNode->data.ResourceHash;
-            //                 std::shared_ptr<asset::MeshData> meshData = rm->GetMeshData(meshHash);
-            //                 if (!meshData || !meshData->uploaded)
-            //                     continue;
-
-            //                 meshInfo.surface.startIndex = 0u;
-            //                 meshInfo.surface.count = meshData->indices.size();
-
-            //                 //todo
-            //                 //meshData->meshBufferHandle;
-            //                 //meshInfo.meshBuffer = meshData->buffers;
-            //                 //mMeshBufferBank.meshInfos.insert({meshInfo.meshDataHandle, meshInfo});
-            //                 //sceneMesh->meshGpuInfoHash = meshHandle;
-
-            //                 RenderObject def;
-            //                 def.indexCount = meshInfo.surface.count;
-            //                 def.firstIndex = meshInfo.surface.startIndex;
-            //                 def.indexBuffer = meshInfo.meshBuffer.indexBuffer.buffer;
-            //                 def.material = &defaultData;
-
-            //                 def.transform = transform;
-
-            //                 def.vertexBufferAddress = meshInfo.meshBuffer.vertexBufferAddress;
-
-            //                 //mainDrawContext.OpaqueSurfaces.push_back(def);
-            //             }
-            //         }
-            //     };
-
-            //     auto rNode = sceneData->GetNode(sceneData->RootIndex());
-            //     auto rEmpty = std::dynamic_pointer_cast<SceneEmptyNode>(rNode);
-            //     assert(rEmpty);
-            //     Mat4f rTransform = rEmpty->transform;
-            //     //stRecursive(sceneData,sceneData->RootIndex(),rTransform);
-            // }
         }
+    }
+
+    void VulkanCore::flush_mesh_delete_cache()
+    {
+        for(auto & buffer : mMeshDeleteCache)
+        {
+            destroy_buffer(buffer.indexBuffer);
+            destroy_buffer(buffer.vertexBuffer);
+        }
+
+        mMeshDeleteCache.clear();
     }
 
     void VulkanCore::cleanup()
@@ -253,17 +192,14 @@ namespace unknown::renderer::vulkan
                 _frames[i]._deletionQueue.flush();
             }
 
+            //mark
             for (auto &mesh : testMeshes)
             {
                 destroy_buffer(mesh->meshBuffers.indexBuffer);
                 destroy_buffer(mesh->meshBuffers.vertexBuffer);
             }
 
-            for (auto &meshInfo : mMeshBufferBank.meshInfos)
-            {
-                destroy_buffer(meshInfo.second.meshBuffer.indexBuffer);
-                destroy_buffer(meshInfo.second.meshBuffer.vertexBuffer);
-            }
+            flush_mesh_delete_cache();
 
             metalRoughMaterial.clear_resources(_device);
             _mainDeletionQueue.flush();
@@ -426,10 +362,12 @@ namespace unknown::renderer::vulkan
         // we will overwrite it all so we dont care about what was the older layout
         utils::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL);
 
+        //temp
         draw_background(cmd);
 
         utils::transition_image(cmd, _drawImage.image, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
         utils::transition_image(cmd, _depthImage.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+
 
         draw_geometry(cmd, context);
 
@@ -1232,6 +1170,11 @@ namespace unknown::renderer::vulkan
 
         return newSurface;
         //< mesh_create_2
+    }
+
+    void VulkanCore::removeMesh(GPUMeshBuffers buffer)
+    {
+        mMeshDeleteCache.push_back(buffer);
     }
 
     void GLTFMetallic_Roughness::build_pipelines(VulkanCore *engine)

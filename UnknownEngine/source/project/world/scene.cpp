@@ -1,4 +1,8 @@
 #include "scene.hpp"
+//#include <nlohmann/json.hpp>
+#include "serialization/jsonSerializer.hpp"
+#include "asset/asset.hpp"
+#include "core/hash.hpp"
 
 namespace unknown
 {
@@ -88,5 +92,33 @@ namespace unknown
             return false;
 
         return parents[0];
+    }
+
+    void SceneLoader::LoadScene(const SceneLoaderContext & context)
+    {
+        Serializer json;
+
+        if(!context.managerPtr||!json.Load(context.sceneFilePath))
+            return;
+
+        auto scene = json.Access("scene");
+
+        if(!scene.isEmpty())
+        {
+            auto assets = scene.Access("assets");
+            auto asize = assets.Size();
+            for(u64 i = 0; i < asize; i++)
+            {
+                auto item = assets.Access(i);
+                auto optPath = item.Access("path").Value<std::string>();
+                if(optPath.has_value())
+                {
+                    context.managerPtr->AddAssetMetaData(optPath.value(), asset::AssetType::Model);
+                    h64 h = math::HashString(optPath.value());
+                    
+                    bool load = context.managerPtr->LoadModelData(h);
+                }
+            }
+        }
     }
 }

@@ -1,81 +1,66 @@
 #pragma once
-#include "core/singleton.hpp"
-#include "core/handles.hpp"
-#include "renderer/rendererHandles.hpp"
-#include "memory/resource.hpp"
 #include "platform/type.hpp"
+#include "cassert"
+#include "asset/asset.hpp"
+#include "world/scene.hpp"
+
+#include <memory>
 #include <string>
 #include <unordered_map>
-#include <vector>
 
-#include "assets.hpp"
+namespace unknown::renderer
+{
+    // TODO Temp
+    class IRenderer;
+}
 
-// temp
-#include "modelLoader.hpp"
+namespace unknown::renderer::vulkan
+{
+    // TODO Temp
+    class VulkanCore;
+}
 
 namespace unknown::asset
 {
-    // class AssetManager : public Singleton<AssetManager>
-    // {
-    //     friend class Singleton<AssetManager>;
+    struct MeshAssetBank
+    {
+        std::shared_ptr<MeshData> GetMeshAsset(h64 hash);
+        std::shared_ptr<MeshData> AcquireMeshAsset(h64 hash);
 
-    // public:
-    //     virtual void initialize() override;
-    //     ~AssetManager(){};
-    //     static renderer::RenderElementHandle RequestRenderElement(RenderElementAssetInfo info) { return sInstance->requestRenderElement(info); }
-    //     static renderer::TextureHandle RequestTexture(TextureAssetInfo info) { return sInstance->requestTexture(info); }
-    //     static renderer::ProgramHandle RequestProgram(ProgramAssetInfo info) { return sInstance->requestProgram(info); }
-    //     static LoadedRenderObject RequestRenderObject(RenderElementAssetInfo info) { return sInstance->requestRenderObject(info); }
-    //     // static bool LoadMeshRawData(MeshRawData & raw, RenderElementAssetInfo info) { return sInstance->loadMeshRawData(raw, info); }
-    //     static bool LoadSceneRawData(SceneRawData &raw, RenderElementAssetInfo info) { return sInstance->loadSceneRawData(raw, info); }
+        std::unordered_map<h64, std::shared_ptr<MeshData>> mMeshAsset;
+    };
 
-    // protected:
-    //     AssetManager(){};
+    struct SceneAssetBank
+    {
+        std::shared_ptr<SceneTree> GetSceneAsset(h64 hash);
+        std::shared_ptr<SceneTree> AcquireSceneAsset(h64 hash);
 
-    //     std::unordered_map<u64, renderer::RenderElementHandle> mLoadedRenderElements;
-    //     std::unordered_map<u64, renderer::TextureHandle> mLoadedTexture;
-    //     std::unordered_map<u64, renderer::ProgramHandle> mLoadedProgram;
+        std::unordered_map<h64, std::shared_ptr<SceneTree>> mSceneAsset;
+    };
 
-    // private:
-    //     renderer::RenderElementHandle requestRenderElement(RenderElementAssetInfo info);
-    //     renderer::TextureHandle requestTexture(TextureAssetInfo info);
-    //     renderer::ProgramHandle requestProgram(ProgramAssetInfo info);
-    //     LoadedRenderObject requestRenderObject(RenderElementAssetInfo info);
+    class AssetManager final : public IAssetManager
+    {
+    public:
+        static void DebugPrintAssetHierarchy(std::string_view assetPath);
 
-    //     // bool loadMeshRawData(MeshRawData &raw, RenderElementAssetInfo info);
-    //     bool loadSceneRawData(SceneRawData &raw, RenderElementAssetInfo info);
-    // };
+        AssetManager(std::shared_ptr<renderer::IRenderer> renderer) : mpRenderer(renderer) {}
 
-    // //TODO MEMORY ALLOCATOR
-    // //TODO MULTI THREAD
-    // class AssetsManager : public Singleton<AssetsManager>
-    // {
-    //     friend class Singleton<AssetsManager>;
-    //     friend class GLTFLoader;
+        virtual std::shared_ptr<SceneTree> GetSceneTree(h64 hash) override;
+        virtual std::shared_ptr<MeshData> GetMeshData(h64 hash) override;
 
-    // public:
-    //     std::shared_ptr<MeshAsset> GetMeshAsset(std::string name);
-    //     std::shared_ptr<MeshAsset> GetMeshAsset(AssetHandle handle);
+        virtual bool AddAssetMetaData(std::string_view stringView, AssetType type) override;
+        virtual bool LoadModelData(h64 hash) override;
 
-    //     AssetHandle GetAssetHandle(std::string name);
-    //     AssetInfos GetAssetInfos(AssetHandle handle);
+        virtual void Initialize() override;
 
-    // private:
-    //     AssetsManager();
+    private:
+        std::shared_ptr<renderer::IRenderer> mpRenderer;
 
-    //     void load_engine_config_default_assets_info();
+        MeshAssetBank mMeshAsset;
+        SceneAssetBank mSceneAsset;
 
-    //     virtual void initialize() override {};
+        std::unordered_map<h64, AssetMetaData> mAssetMetaDataMap;
 
-    //     static std::string kAssetDefaultRootFolder;
-    //     static std::string kAssetDefaultModelFolder;
-    //     static std::string kAssetDefaultConfigFolder;
-
-    //     std::unordered_map<std::string,AssetHandle> mNameToHandle;
-
-    //     std::unordered_map<h64,MeshData> mMeshDataMap;
-
-    //     ResourceArray<AssetHandle, AssetInfos> mAssetsInfoMap;       
-    //     ResourceArray<AssetHandle, MeshAsset> mMeshAssetMap;
-    // };
+        bool mbInitialized = false;
+    };
 }

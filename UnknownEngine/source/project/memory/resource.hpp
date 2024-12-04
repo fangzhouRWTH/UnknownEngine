@@ -149,6 +149,8 @@ namespace unknown
         void free(u32 idx)
         {
             freed.push(idx);
+            //todo 
+            //delete object
         }
 
         DataType& get(u32 idx)
@@ -161,6 +163,13 @@ namespace unknown
         {
             assert(idx < data.size());
             return data[idx];
+        }
+
+        void clear()
+        {
+            data.clear();
+            auto newQ = std::queue<u32>();
+            freed.swap(newQ);
         }
     };
 
@@ -268,6 +277,23 @@ namespace unknown
             u32 Count()
             {
                 return Size() - FreeQueueSize();
+            }
+
+            std::vector<DataType*> GetAll()
+            {
+                std::vector<DataType*> dataVector;
+                for(auto k:mKeys)
+                {
+                    if(k<mCapacity)
+                        dataVector.push_back(&mContainer.get(k));
+                }
+                return dataVector;
+            }
+
+            void Clear()
+            {
+                mKeys.clear();
+                mContainer.clear();
             }
         private:
             u32 mCapacity = HandleType::kInvalidHandle;

@@ -44,16 +44,16 @@ namespace unknown::asset
         }
 
 
-        //test
+        //test    
         if(scene->HasTextures())
         {
-            auto texNum = scene->mNumTextures;
-            for(u32 i = 0u; i < texNum; i++)
-            {
-                auto tx = scene->mTextures[i];
-                debug_print_texture_info(tx);
-                //tx->pcData
-            }
+            // auto texNum = scene->mNumTextures;
+            // for(u32 i = 0u; i < texNum; i++)
+            // {
+            //     auto tx = scene->mTextures[i];
+            //     debug_print_texture_info(tx);
+            //     //tx->pcData
+            // }
         }
 
         if(scene->HasMaterials())
@@ -61,6 +61,8 @@ namespace unknown::asset
             //test
             auto matNum = scene->mNumMaterials;
             auto mat = scene->mMaterials[0];
+            
+            //mat->;
             //mat->
         }
 

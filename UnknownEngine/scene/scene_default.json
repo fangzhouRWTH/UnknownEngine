@@ -1,5 +1,13 @@
 {
     "scene": {
+        "assets":[
+            {
+                "name": "structure",
+                "path": "C:/Users/franz/Downloads/Documents/Git/UnknownEngine/UnknownEngine/UnknownEngine/assets/models/structure/structure_.glb",
+                "uuid": ""
+            },
+            {}
+        ],
         "entities": [
             {
                 "name": "player",

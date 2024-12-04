@@ -24,6 +24,7 @@ set(RENDERER_SOURCE_FILES
 
     ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/renderer/renderer.cpp
 
+    ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/renderer/vulkan/api_vulkan.cpp
     ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/renderer/vulkan/vkCore.cpp
     ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/renderer/vulkan/vkInitializer.cpp
     ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/renderer/vulkan/vkUtils.cpp
@@ -31,6 +32,8 @@ set(RENDERER_SOURCE_FILES
     ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/renderer/vulkan/vkPipeline.cpp
 
     #${CMAKE_SOURCE_DIR}/source/project/renderer/shader.cpp
+
+    ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/serialization/jsonSerializer.cpp
 
     ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/configuration/globalValues.cpp
 
@@ -52,7 +55,7 @@ set(RENDERER_SOURCE_FILES
     ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/renderer/rendererHandles.cpp
 
     ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/asset/modelLoader.cpp
-    ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/asset/resourceManager.cpp
+    ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/asset/assetManager.cpp
     #${CMAKE_SOURCE_DIR}/source/project/asset/assetManager.cpp
     ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/asset/textureLoader.cpp
     ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/asset/utils/assimpHelper.cpp
@@ -62,6 +65,7 @@ set(RENDERER_SOURCE_FILES
     ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/world/scene.cpp
 
     ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/renderer/gui/simpleGUI.cpp
+
     #todo move out as dependency
     ${CMAKE_SOURCE_DIR}/UnknownEngine/source/external/IMGUI/vulkan_glfw/src/imgui.cpp
     ${CMAKE_SOURCE_DIR}/UnknownEngine/source/external/IMGUI/vulkan_glfw/src/imgui_draw.cpp

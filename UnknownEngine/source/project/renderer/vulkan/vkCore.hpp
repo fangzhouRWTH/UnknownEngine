@@ -4,7 +4,7 @@
 #include "core/math.hpp"
 #include "memory/resource.hpp"
 #include "renderer/rendererHandles.hpp"
-#include "asset/resourceManager.hpp"
+//#include "asset/assetManager.hpp"
 
 #include "vkDescriptor.hpp"
 
@@ -266,8 +266,9 @@ namespace unknown::renderer::vulkan
 
         void immediate_submit(std::function<void(VkCommandBuffer cmd)> &&function);
 
-        GPUMeshBufferHandle createGPUMesh(std::span<uint32_t> indices, std::span<Vertex> vertices);
+        //GPUMeshBufferHandle createGPUMesh(std::span<uint32_t> indices, std::span<Vertex> vertices);
         GPUMeshBuffers uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices);
+        void removeMesh(GPUMeshBuffers buffer);
 
         AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
         AllocatedImage create_image(VkExtent3D size, VkFormat format, VkImageUsageFlags usage, bool mipmapped = false);
@@ -304,8 +305,13 @@ namespace unknown::renderer::vulkan
         // temp
         void init_default_data();
 
+        void flush_mesh_delete_cache();
+
     private:
-        MeshBufferBank mMeshBufferBank;
+
+        //temp
+        std::vector<GPUMeshBuffers> mMeshDeleteCache;
+        //MeshBufferBank mMeshBufferBank;
         //ResourceArray<GPUMeshBufferHandle, GPUMeshBuffers> mGPUMeshBuffersMap;
     };
 }

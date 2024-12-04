@@ -19,10 +19,9 @@
 #include "renderer/renderSystem/meshComponent.hpp"
 
 #include "configuration/globalValues.hpp"
-// #include "asset/modelLoader.hpp"
+#include "world/scene.hpp"
 
-//#include "asset/assetManager.hpp"
-#include "asset/resourceManager.hpp"
+#include "asset/assetManager.hpp"
 
 #include "debug/log.hpp"
 
@@ -160,17 +159,23 @@ namespace unknown
 
         // Asset Manager
         {
-            mpResourceManager = std::make_shared<asset::ResourceManager>(mpRenderer);
-            mpResourceManager->Initialize();
+            mpAssetManager = std::make_shared<asset::AssetManager>(mpRenderer);
+            mpAssetManager->Initialize();
 
             std::string modelPath = "C:/Users/franz/Downloads/Documents/Git/UnknownEngine/UnknownEngine/UnknownEngine/assets/models/structure/structure_.glb";
-            asset::ResourceManager::DebugPrintAssetHierarchy(modelPath);
-            mpResourceManager->AddResourceMetaData(modelPath, asset::ResourceType::Model);
+            //asset::AssetManager::DebugPrintAssetHierarchy(modelPath);
+            // mpAssetManager->AddAssetMetaData(modelPath, asset::AssetType::Model);
             h64 h = math::HashString(modelPath);
 
-            bool load = mpResourceManager->LoadModelData(h);
+            SceneLoaderContext sceneLoaderContext;
+            sceneLoaderContext.managerPtr = mpAssetManager;
+            sceneLoaderContext.sceneFilePath = "C:/Users/franz/Downloads/Documents/Git/UnknownEngine/UnknownEngine/UnknownEngine/scene/scene_default.json";
+            
+            SceneLoader::LoadScene(sceneLoaderContext);
 
-            auto sceneData = mpResourceManager->GetSceneTree(h);
+            // bool load = mpAssetManager->LoadModelData(h);
+
+            auto sceneData = mpAssetManager->GetSceneTree(h);
             
             rObjects.clear();
 
@@ -196,8 +201,8 @@ namespace unknown
                         else if (std::shared_ptr<SceneMeshNode> mNode = std::dynamic_pointer_cast<SceneMeshNode>(nPtr); mNode)
                         {
                             // draw
-                            h64 meshHash = mNode->data.ResourceHash;
-                            std::shared_ptr<asset::MeshData> meshData = mpResourceManager->GetMeshData(meshHash);
+                            h64 meshHash = mNode->data.AssetHash;
+                            std::shared_ptr<asset::MeshData> meshData = mpAssetManager->GetMeshData(meshHash);
                             if (!meshData || !meshData->uploaded)
                                 continue;
 

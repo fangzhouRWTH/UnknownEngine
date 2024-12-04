@@ -10,7 +10,7 @@
 #include "core/structure.hpp"
 #include "world/scene.hpp"
 
-#include "assets.hpp"
+#include "asset.hpp"
 
 namespace unknown::asset
 {

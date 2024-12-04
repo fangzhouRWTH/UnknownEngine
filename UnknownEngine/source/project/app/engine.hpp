@@ -15,7 +15,7 @@ namespace unknown
 
     namespace asset
     {
-        class ResourceManager;
+        class IAssetManager;
     }
 
     namespace ecs
@@ -38,6 +38,6 @@ namespace unknown
             bool loadScene();
             std::shared_ptr<IApplication> mpApp;
             std::shared_ptr<renderer::IRenderer> mpRenderer;
-            std::shared_ptr<asset::ResourceManager> mpResourceManager;
+            std::shared_ptr<asset::IAssetManager> mpAssetManager;
     };
 }
