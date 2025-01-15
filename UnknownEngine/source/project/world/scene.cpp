@@ -3,6 +3,7 @@
 #include "serialization/jsonSerializer.hpp"
 #include "asset/asset.hpp"
 #include "core/hash.hpp"
+#include "configuration/globalValues.hpp"
 
 namespace unknown
 {
@@ -113,8 +114,9 @@ namespace unknown
                 auto optPath = item.Access("path").Value<std::string>();
                 if(optPath.has_value())
                 {
-                    context.managerPtr->AddAssetMetaData(optPath.value(), asset::AssetType::Model);
-                    h64 h = math::HashString(optPath.value());
+                    std::string path = config::asset_folder_path + optPath.value();
+                    context.managerPtr->AddAssetMetaData(path, asset::AssetType::Model);
+                    h64 h = math::HashString(path);
                     
                     bool load = context.managerPtr->LoadModelData(h);
                 }

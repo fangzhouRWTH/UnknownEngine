@@ -29,6 +29,9 @@
 
 #include "renderer/gui/simpleGUI.hpp"
 
+#include "renderer/material/materials.hpp"
+#include "renderer/material/materialManager.hpp"
+
 #include <memory>
 
 
@@ -100,10 +103,12 @@ namespace unknown
             fInfo.width = 1920u;
             fInfo.height = 1080u;
             FrameworkManager::Initialize(fInfo);
+        }
 
+        // Renderer
+        {
             renderer::RendererInitInfo rInfo;
             rInfo.windowPtr = FrameworkManager::GetWindowRawPointer();
-
             // Temp Vulkan Test
             mpRenderer = std::make_shared<renderer::RenderEngine>(renderer::EGraphicAPI::Vulkan);
             mpRenderer->Initialize(rInfo);
@@ -114,9 +119,25 @@ namespace unknown
                 true);
         }
 
-        // Renderer
+        // AssetManager
         {
+            mpAssetManager = std::make_shared<asset::AssetManager>(mpRenderer);
+            mpAssetManager->Initialize();
+        }
 
+        //MaterialManager
+        {
+            mpMaterialManager = std::make_shared<renderer::MaterialManager>(mpRenderer);
+            mpMaterialManager->Initialize();
+        }
+
+        // Scene
+        {
+            SceneLoaderContext sceneLoaderContext;
+            sceneLoaderContext.managerPtr = mpAssetManager;
+            sceneLoaderContext.sceneFilePath = "C:/Users/franz/Downloads/Documents/Git/UnknownEngine/UnknownEngine/UnknownEngine/scene/scene_default.json";
+            
+            SceneLoader::LoadScene(sceneLoaderContext);
         }
 
         // ECS
@@ -157,23 +178,10 @@ namespace unknown
             mpEcsManager->RegisterEntity<ecs::SCamera, ecs::EPlayer>(camerasystem_h._system_id, player_default_h._entity_id);
         }
 
-        // Asset Manager
+        // Asset
         {
-            mpAssetManager = std::make_shared<asset::AssetManager>(mpRenderer);
-            mpAssetManager->Initialize();
-
-            std::string modelPath = "C:/Users/franz/Downloads/Documents/Git/UnknownEngine/UnknownEngine/UnknownEngine/assets/models/structure/structure_.glb";
-            //asset::AssetManager::DebugPrintAssetHierarchy(modelPath);
-            // mpAssetManager->AddAssetMetaData(modelPath, asset::AssetType::Model);
+            std::string modelPath = config::asset_folder_path + "models/structure/structure_.glb";
             h64 h = math::HashString(modelPath);
-
-            SceneLoaderContext sceneLoaderContext;
-            sceneLoaderContext.managerPtr = mpAssetManager;
-            sceneLoaderContext.sceneFilePath = "C:/Users/franz/Downloads/Documents/Git/UnknownEngine/UnknownEngine/UnknownEngine/scene/scene_default.json";
-            
-            SceneLoader::LoadScene(sceneLoaderContext);
-
-            // bool load = mpAssetManager->LoadModelData(h);
 
             auto sceneData = mpAssetManager->GetSceneTree(h);
             
@@ -210,6 +218,9 @@ namespace unknown
                             rObject.meshBufferHandle = meshData->meshBufferHandle;
                             rObject.transform = transform;
                             rObject.indicesCount = meshData->indices.size();
+
+                            //temp
+                            rObject.materialKey = renderer::ToyMaterial::GetMaterialInfo().GetKey();
 
                             rObjects.push_back(rObject);
                         }

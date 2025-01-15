@@ -45,16 +45,6 @@ namespace unknown
 
     static_assert(sizeof(GPUGLTFMaterial) == 256);
 
-    struct GPUSceneData
-    {
-        Mat4f view;
-        Mat4f proj;
-        Mat4f viewproj;
-        Vec4f ambientColor;
-        Vec4f sunlightDirection; // w for sun power
-        Vec4f sunlightColor;
-    };
-
     //> mat_types
     enum class MaterialPass : uint8_t
     {

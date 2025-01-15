@@ -11,6 +11,7 @@ namespace unknown
     namespace renderer
     {
         class IRenderer;
+        class IMaterialManager;
     }
 
     namespace asset
@@ -32,12 +33,15 @@ namespace unknown
 
         private:
             std::shared_ptr<ecs::ECSManager> mpEcsManager;
+            std::shared_ptr<IApplication> mpApp;
+            std::shared_ptr<renderer::IRenderer> mpRenderer;
+            std::shared_ptr<asset::IAssetManager> mpAssetManager;
+            std::shared_ptr<renderer::IMaterialManager> mpMaterialManager;
+
+
             core::Clock mEngineClock;
             
         private:
             bool loadScene();
-            std::shared_ptr<IApplication> mpApp;
-            std::shared_ptr<renderer::IRenderer> mpRenderer;
-            std::shared_ptr<asset::IAssetManager> mpAssetManager;
     };
 }

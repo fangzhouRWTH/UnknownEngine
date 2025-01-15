@@ -3,7 +3,7 @@
         "assets":[
             {
                 "name": "structure",
-                "path": "C:/Users/franz/Downloads/Documents/Git/UnknownEngine/UnknownEngine/UnknownEngine/assets/models/structure/structure_.glb",
+                "path": "models/structure/structure_.glb",
                 "uuid": ""
             },
             {}
@@ -42,6 +42,9 @@
                         }
                     }
                 ]
+            },
+            {
+                "name": ""
             }
         ]
     }

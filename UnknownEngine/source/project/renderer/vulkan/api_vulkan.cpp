@@ -34,6 +34,8 @@ void API_Vulkan::push_render_objects(std::span<RenderObject> objects) {
     def.firstIndex = 0u;
     def.indexBuffer = meshBuffer->indexBuffer.buffer;
     def.material = &mCore.defaultData;
+    //todo
+    def.materialKey = o.materialKey;
 
     def.transform = o.transform;
 

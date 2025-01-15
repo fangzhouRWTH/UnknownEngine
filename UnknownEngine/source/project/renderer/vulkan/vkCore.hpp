@@ -11,8 +11,12 @@
 // temp
 #include "context/engineContext.hpp"
 #include "asset/modelLoader.hpp"
+//temp
+#include "asset/assetManager.hpp"
+#include "renderer/api_interface.hpp"
 
 #include <vector>
+#include <array>
 #include "renderer/vulkan/sdk/vk_mem_alloc.h"
 #include <deque>
 #include <functional>
@@ -113,6 +117,8 @@ namespace unknown::renderer::vulkan
         VkBuffer indexBuffer;
 
         MaterialInstance *material;
+        //todo
+        MaterialKey materialKey = 0;
 
         Mat4f transform;
         VkDeviceAddress vertexBufferAddress;
@@ -122,17 +128,16 @@ namespace unknown::renderer::vulkan
     {
         std::vector<VulkanRenderObject> OpaqueSurfaces;
     };
-    //< renderobject
 
-    //> meshnode
-    // struct MeshNode : public Node
-    // {
+    struct PipelineInfo
+    {
+        VkPipelineLayout layout;
+        VkPipeline pipeline;
 
-    //     std::shared_ptr<MeshAsset> mesh;
-
-    //     virtual void Draw(const glm::mat4 &topMatrix, DrawContext &ctx) override;
-    // };
-    //< meshnode
+        u32 descriptorSetLayoutCount = 0u;
+        std::array<VkDescriptorSetLayout,16u> descriptorSetLayouts;
+        std::array<VkDescriptorSet,16u> descriptorSets;
+    };
 
     struct GPUMeshInfo
     {
@@ -218,7 +223,7 @@ namespace unknown::renderer::vulkan
 
         // draw resources
         DrawContext mainDrawContext;
-        GPUSceneData sceneData;
+        SceneUniform sceneData;
         MaterialInstance defaultData;
 
         GLTFMetallic_Roughness metalRoughMaterial;
@@ -307,7 +312,11 @@ namespace unknown::renderer::vulkan
 
         void flush_mesh_delete_cache();
 
+    public:
+        void create_pipeline(const MaterialClassInfo & info);
+
     private:
+        std::unordered_map<MaterialKey,PipelineInfo> mPipelineMap;
 
         //temp
         std::vector<GPUMeshBuffers> mMeshDeleteCache;

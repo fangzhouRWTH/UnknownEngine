@@ -61,6 +61,9 @@ set(RENDERER_SOURCE_FILES
     ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/asset/utils/assimpHelper.cpp
     #{CMAKE_SOURCE_DIR}/source/project/asset/texture.cpp
 
+    ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/renderer/material/materialManager.cpp
+    ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/renderer/material/materials.cpp
+
     ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/world/world.cpp
     ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/world/scene.cpp
 
@@ -104,6 +107,9 @@ target_include_directories(UnknownEngine PUBLIC
 
 
 add_subdirectory(tests)
+
+add_subdirectory(experiment)
+
 # set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 # set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 # include(CPack)

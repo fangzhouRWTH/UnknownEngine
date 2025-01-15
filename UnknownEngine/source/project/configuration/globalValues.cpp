@@ -12,6 +12,8 @@ namespace unknown::config
 // TODO 
     #ifdef __linux__
     const std::string shader_folder_path = "/home/fzl/workspace/git_projects/RenderEngineV0/UnknownEngine/shaders/";
+
+    const std::string asset_folder_path = "/home/fzl/workspace/git_projects/RenderEngineV0/UnknownEngine/assets/";
     const std::string texture_folder_path = "/home/fzl/workspace/git_projects/RenderEngineV0/UnknownEngine/assets/images/textures/";
     const std::string model_folder_path = "/home/fzl/workspace/git_projects/RenderEngineV0/UnknownEngine/assets/models/";
     const std::string scene_folder_path = "/home/fzl/workspace/git_projects/RenderEngineV0/UnknownEngine/scene/";
@@ -20,6 +22,8 @@ namespace unknown::config
     const std::string log_folder_path = "/home/fzl/workspace/git_projects/RenderEngineV0/log/";
     #elif defined(_WIN64)
     const std::string shader_folder_path = "C:/Users/franz/Downloads/Documents/Git/UnknownEngine/UnknownEngine/UnknownEngine/shaders/";
+    
+    const std::string asset_folder_path = "C:/Users/franz/Downloads/Documents/Git/UnknownEngine/UnknownEngine/UnknownEngine/assets/";
     const std::string texture_folder_path = "C:/Users/franz/Downloads/Documents/Git/UnknownEngine/UnknownEngine/UnknownEngine/assets/images/textures/";
     const std::string model_folder_path = "C:/Users/franz/Downloads/Documents/Git/UnknownEngine/UnknownEngine/UnknownEngine/assets/models/";
     const std::string scene_folder_path = "C:/Users/franz/Downloads/Documents/Git/UnknownEngine/UnknownEngine/UnknownEngine/scene/";
