@@ -279,10 +279,26 @@ namespace unknown::renderer::vulkan
 
         // allocate a new uniform buffer for the scene data
         AllocatedBuffer gpuSceneDataBuffer = create_buffer(sizeof(SceneUniform), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+        
+        //test
+        // AllocatedBuffer UCOLOR1 = create_buffer(sizeof(Vec4f),VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+        // AllocatedBuffer UCOLOR2 = create_buffer(sizeof(Vec4f),VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+        // AllocatedBuffer UCOLOR3 = create_buffer(sizeof(Vec4f),VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+        // AllocatedBuffer UCOLOR4 = create_buffer(sizeof(Vec4f),VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+        //test
 
         // add it to the deletion queue of this frame so it gets deleted once its been used
         get_current_frame()._deletionQueue.push_function([=, this]()
                                                          { destroy_buffer(gpuSceneDataBuffer); });
+
+        // get_current_frame()._deletionQueue.push_function([=, this]()
+        //                                                  { destroy_buffer(UCOLOR1); });
+        // get_current_frame()._deletionQueue.push_function([=, this]()
+        //                                                  { destroy_buffer(UCOLOR2); });
+        // get_current_frame()._deletionQueue.push_function([=, this]()
+        //                                                  { destroy_buffer(UCOLOR3); });
+        // get_current_frame()._deletionQueue.push_function([=, this]()
+        //                                                  { destroy_buffer(UCOLOR4); });
 
         // write the buffer
         SceneUniform *sceneUniformData = (SceneUniform *)gpuSceneDataBuffer.allocation->GetMappedData();

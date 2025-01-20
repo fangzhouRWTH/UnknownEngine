@@ -282,8 +282,7 @@ void load_gltf(std::shared_ptr<renderer::IRenderer> renderer,
   AssimpImporter importer;
   importer.Import(config);
 
-  std::shared_ptr<SceneTree> sceneTree =
-      sceneAsset.AcquireSceneAsset(hash);
+  std::shared_ptr<SceneTree> sceneTree = sceneAsset.AcquireSceneAsset(hash);
   importer.LoadSceneTree(sceneTree);
 }
 

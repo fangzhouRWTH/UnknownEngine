@@ -185,4 +185,5 @@ namespace unknown
     template std::optional<TYPE> Serializer::Field::Value<TYPE>();
 
     DECL_VALUE_GETTER(std::string)
+    DECL_VALUE_GETTER(bool)
 }

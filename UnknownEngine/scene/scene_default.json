@@ -2,11 +2,17 @@
     "scene": {
         "assets":[
             {
+                "load": false,
                 "name": "structure",
                 "path": "models/structure/structure_.glb",
                 "uuid": ""
             },
-            {}
+            {
+                "load": true,
+                "name": "test_ball",
+                "path": "models/test/ball.glb",
+                "uuid": ""
+            }
         ],
         "entities": [
             {

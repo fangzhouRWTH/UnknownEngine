@@ -180,7 +180,8 @@ namespace unknown
 
         // Asset
         {
-            std::string modelPath = config::asset_folder_path + "models/structure/structure_.glb";
+            //std::string modelPath = config::asset_folder_path + "models/structure/structure_.glb";
+            std::string modelPath = config::asset_folder_path + "models/test/ball.glb";
             h64 h = math::HashString(modelPath);
 
             auto sceneData = mpAssetManager->GetSceneTree(h);
@@ -231,7 +232,38 @@ namespace unknown
                 auto rEmpty = std::dynamic_pointer_cast<SceneEmptyNode>(rNode);
                 assert(rEmpty);
                 Mat4f rTransform = rEmpty->transform;
-                stRecursive(sceneData,sceneData->RootIndex(),rTransform);
+
+                float distX = 5.0;
+                float distY = 5.0;
+                float distZ = 5.0;
+
+                Vec4f xv = Vec4f(distX,0.0,0.0,0.0);
+                Vec4f zv = Vec4f(0.0,0.0,distZ,0.0);
+                Vec4f yv = Vec4f(0.0,distY,0.0,0.0);
+
+                u32 countX = 20u;
+                u32 countZ = 10u;
+                u32 countY = 20u;
+
+                Vec4f startV = Vec4f(-distX * countX/2.0f, -distY * countY/2.0f, -distZ * countZ/2.0f,1.0);
+
+                for(u32 i = 0u; i < countX; i++)
+                {
+                    for(u32 n = 0u; n < countZ; n++)
+                    {
+                        for(u32 j = 0u; j < countY; j++)
+                        {
+                            Vec4f dv = xv * i + yv * j + zv * n + startV;
+                            Mat4f matGrid = Mat4f::Identity();
+                            matGrid.col(3) = dv;
+                            matGrid = rTransform * matGrid;
+
+                            stRecursive(sceneData,sceneData->RootIndex(),matGrid);
+                        }
+                    }
+                }
+
+                //stRecursive(sceneData,sceneData->RootIndex(),rTransform);
             }
         }
 

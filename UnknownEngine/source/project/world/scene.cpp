@@ -111,6 +111,11 @@ namespace unknown
             for(u64 i = 0; i < asize; i++)
             {
                 auto item = assets.Access(i);
+                auto optLoad = item.Access("load").Value<bool>();
+                if(!optLoad.has_value()||!optLoad.value())
+                {
+                    continue;
+                }
                 auto optPath = item.Access("path").Value<std::string>();
                 if(optPath.has_value())
                 {

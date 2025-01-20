@@ -7,6 +7,11 @@
 
 namespace unknown::renderer
 {
+    const std::string u_test_color1_data = "test_color1_data";
+    const std::string u_test_color2_data = "test_color2_data";
+    const std::string u_test_color3_data = "test_color3_data";
+    const std::string u_test_color4_data = "test_color4_data";
+
     const std::string u_global_scene_data = "global_scene_data";
 
     template<typename M>
@@ -97,6 +102,13 @@ namespace unknown::renderer
             .shared(SharedResource::Global)
             .stage(PipelineStage::VertexFragment)
             .push();
+
+            // builder.begin(u_test_color1_data)
+            // .type(PipelineResourceType::UniformBuffer)
+            // .size(sizeof(Vec4f))
+            // .shared(SharedResource::Global)
+            // .stage(PipelineStage::VertexFragment)
+            // .push();
 
             auto info = builder.end();
 

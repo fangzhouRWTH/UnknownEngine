@@ -37,13 +37,15 @@ namespace unknown::asset
         u32 childNum = root->mNumChildren;
         auto children = root->mChildren;
 
+        {
+            load_node(scene,root,sceneTree,sceneTree->RootIndex(),mConfig);
+        }
+
         for(u32 i = 0u; i < childNum; i++)
         {
             auto child = children[i];
             load_node(scene,child,sceneTree,sceneTree->RootIndex(), mConfig);
         }
-
-
         //test    
         if(scene->HasTextures())
         {
