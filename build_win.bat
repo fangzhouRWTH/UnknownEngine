@@ -1,5 +1,6 @@
 conan install . --build=missing --profile=windows_release
 conan install . --build=missing --profile=windows_debug
+conan install . --build=missing --profile=windows_release -s "&:build_type=RelWithDebInfo"
 
 cd build
 

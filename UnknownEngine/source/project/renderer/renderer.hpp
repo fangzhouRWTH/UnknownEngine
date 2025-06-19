@@ -40,6 +40,7 @@ namespace unknown::renderer
         virtual void Frame(FrameInfo info) = 0;
         virtual void * GetCore() = 0;
         virtual GPUMeshBufferHandle UploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices) = 0;
+        virtual void TestInitIndirectDraw(u64 indicesCount) = 0;
     };
 
     enum class EGraphicAPI
@@ -62,6 +63,7 @@ namespace unknown::renderer
 
         virtual GPUMeshBufferHandle UploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices) override;
 
+        virtual void TestInitIndirectDraw(u64 indicesCount) override;
     private:
         // static std::shared_ptr<GraphicAPI> impl() { return sInstancePtr->mDetail; }
         //static std::shared_ptr<RenderEngine> sInstancePtr;

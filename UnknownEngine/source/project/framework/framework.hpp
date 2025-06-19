@@ -16,6 +16,8 @@ namespace unknown
         std::string name = "";
         u32 width = 800u;
         u32 height = 600u;
+
+        bool allowResize = false;
     };
 
     class FrameworkManager

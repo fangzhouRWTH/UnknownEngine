@@ -16,6 +16,8 @@ public:
 
   virtual GPUMeshBufferHandle upload_mesh(std::span<uint32_t> indices,
                                           std::span<Vertex> vertices) override;
+
+  virtual void test_init_indirect_draw(u64 indicesCount) override;
   
 private:
   //temp

@@ -51,6 +51,9 @@ namespace unknown::renderer::vulkan
         VkCommandPool _commandPool;
         VkCommandBuffer _mainCommandBuffer;
 
+        //temp
+        VkBuffer _indirectDrawBuffer;
+
         DeletionQueue _deletionQueue;
         // cleaned each frame (being updated)
         DescriptorAllocatorGrowable _frameDescriptors;
@@ -273,6 +276,9 @@ namespace unknown::renderer::vulkan
 
         //GPUMeshBufferHandle createGPUMesh(std::span<uint32_t> indices, std::span<Vertex> vertices);
         GPUMeshBuffers uploadMesh(std::span<uint32_t> indices, std::span<Vertex> vertices);
+        
+        //GPUMeshBuffers pushIndirectDrawMesh(std::span<uint32_t> indices, std::span<Vertex> vertices);
+        
         void removeMesh(GPUMeshBuffers buffer);
 
         AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
@@ -300,9 +306,6 @@ namespace unknown::renderer::vulkan
 
         void init_pipelines();
 
-        void init_triangle_pipeline();
-        void init_mesh_pipeline();
-
         void init_descriptors();
 
         void init_sync_structures();
@@ -312,8 +315,23 @@ namespace unknown::renderer::vulkan
 
         void flush_mesh_delete_cache();
 
+        //temp indirect test
+        std::vector<VkDrawIndexedIndirectCommand> tIndirectCommands;
+
+        AllocatedBuffer tIndirectCmdBuffer;
+        VkDeviceAddress tIndirectCmdBufferAddress;
+
+        AllocatedBuffer tInstanceBuffer;
+        VkDeviceAddress tInstanceBufferAddress;
+
+        void init_indirect_draw_data(u64 indicesCount);
+        void init_indirect_instance_data();
+
     public:
         void create_pipeline(const MaterialClassInfo & info);
+
+        //temp
+        void init_indirect_draw(u64 indicesCount);
 
     private:
         std::unordered_map<MaterialKey,PipelineInfo> mPipelineMap;

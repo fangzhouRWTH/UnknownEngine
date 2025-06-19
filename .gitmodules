@@ -1,0 +1,6 @@
+[submodule "UnknownEngine/external/VKBOOTSTRAP/vk-bootstrap"]
+	path = UnknownEngine/external/VKBOOTSTRAP/vk-bootstrap
+	url = https://github.com/charles-lunarg/vk-bootstrap.git
+[submodule "UnknownEngine/external/VOLK/volk"]
+	path = UnknownEngine/external/VOLK/volk
+	url = https://github.com/zeux/volk.git

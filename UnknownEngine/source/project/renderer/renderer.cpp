@@ -197,6 +197,11 @@ GPUMeshBufferHandle RenderEngine::UploadMesh(std::span<uint32_t> indices, std::s
     return mDetail->upload_mesh(indices,vertices);
 }
 
+void RenderEngine::TestInitIndirectDraw(u64 indicesCount) 
+{
+    return mDetail->test_init_indirect_draw(indicesCount);
+}
+
 //     void GraphicBackend::Clear(ClearFrameBuffer clear)
 //     {
 //         //return impl()->clear_frame_buffer(clear);

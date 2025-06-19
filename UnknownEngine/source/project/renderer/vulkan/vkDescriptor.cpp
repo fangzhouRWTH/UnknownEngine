@@ -214,9 +214,9 @@ namespace unknown::renderer::vulkan
             newPool = create_pool(device, setsPerPool, ratios);
 
             setsPerPool = setsPerPool * 1.5;
-            if (setsPerPool > 4092)
+            if (setsPerPool > 4096)
             {
-                setsPerPool = 4092;
+                setsPerPool = 4096;
             }
         }
 

@@ -52,6 +52,6 @@ namespace unknown::renderer
     // {
     // };
     DECL_HANDLE(GPUMeshBufferHandle);
-
+    DECL_HANDLE(GPUMeshStorageHandle);
 
 }

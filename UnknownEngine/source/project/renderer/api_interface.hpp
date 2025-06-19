@@ -225,6 +225,14 @@ namespace unknown::renderer
         Color_Depth,
     };
 
+    struct InstanceData
+    {
+        Vec3f pos;
+        Vec3f rot;
+        float scale;
+        u32 texIndex;
+    };
+
     struct RenderObject
     {
         GPUMeshBufferHandle meshBufferHandle;
@@ -251,6 +259,9 @@ namespace unknown::renderer
         // virtual TextureHandle create_texture_2d(u32 width, u32 height, byte *data, ImageFormat format) = 0;
         //virtual RenderElementHandle create_mesh(VertexLayout layout, float *vertices, u32 uSize, u32 *indices, u32 iSize) = 0;
         virtual GPUMeshBufferHandle upload_mesh(std::span<uint32_t> indices, std::span<Vertex> vertices) = 0;
+        
+        virtual void test_init_indirect_draw(u64 indicesCount) = 0;
+        
         // virtual void use_program(ProgramHandle handle) = 0;
         // virtual void set_uniform_bool(ProgramHandle handle, const char *name, bool value) = 0;
         // virtual void set_uniform_int(ProgramHandle handle, const char *name, int value) = 0;

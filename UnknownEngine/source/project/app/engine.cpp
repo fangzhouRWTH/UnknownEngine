@@ -212,6 +212,7 @@ namespace unknown
                             // draw
                             h64 meshHash = mNode->data.AssetHash;
                             std::shared_ptr<asset::MeshData> meshData = mpAssetManager->GetMeshData(meshHash);
+                            
                             if (!meshData || !meshData->uploaded)
                                 continue;
 
@@ -261,6 +262,13 @@ namespace unknown
                             stRecursive(sceneData,sceneData->RootIndex(),matGrid);
                         }
                     }
+                }
+
+                // test indirect draw
+                if(!rObjects.empty())
+                {
+                    //rObjects[0].indicesCount
+                    mpRenderer->TestInitIndirectDraw(rObjects[0].indicesCount);
                 }
 
                 //stRecursive(sceneData,sceneData->RootIndex(),rTransform);

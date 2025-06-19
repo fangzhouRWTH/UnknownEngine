@@ -6,6 +6,7 @@
 	],
 	"settings": {
 		"cmake.copyCompileCommands": "${workspaceFolder}/compile_commands.json",
+		"cmake.terminal.external": true,
 		//"C_Cpp.default.compileCommands": "${workspaceFolder}/compile_commands.json",
 		"files.associations": {
 			"*.txt": "cmake",
@@ -104,7 +105,10 @@
 			"xtr1common": "cpp",
 			"xtree": "cpp",
 			"xutility": "cpp",
-			"xstddef": "cpp"
+			"xstddef": "cpp",
+			"future": "cpp",
+			"coroutine": "cpp",
+			"resumable": "cpp"
 		},
 	}
 }

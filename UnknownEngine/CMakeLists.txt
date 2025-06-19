@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 project(UnknownEngine VERSION 0.1.0 LANGUAGES C CXX)
 
 find_package(Vulkan REQUIRED)
-find_package(vk-bootstrap REQUIRED)
+#find_package(vk-bootstrap REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(fmt REQUIRED)
 find_package(glfw3 REQUIRED)
@@ -70,12 +70,12 @@ set(RENDERER_SOURCE_FILES
     ${CMAKE_SOURCE_DIR}/UnknownEngine/source/project/renderer/gui/simpleGUI.cpp
 
     #todo move out as dependency
-    ${CMAKE_SOURCE_DIR}/UnknownEngine/source/external/IMGUI/vulkan_glfw/src/imgui.cpp
-    ${CMAKE_SOURCE_DIR}/UnknownEngine/source/external/IMGUI/vulkan_glfw/src/imgui_draw.cpp
-    ${CMAKE_SOURCE_DIR}/UnknownEngine/source/external/IMGUI/vulkan_glfw/src/imgui_tables.cpp
-    ${CMAKE_SOURCE_DIR}/UnknownEngine/source/external/IMGUI/vulkan_glfw/src/imgui_widgets.cpp
-    ${CMAKE_SOURCE_DIR}/UnknownEngine/source/external/IMGUI/vulkan_glfw/src/imgui_impl_vulkan.cpp
-    ${CMAKE_SOURCE_DIR}/UnknownEngine/source/external/IMGUI/vulkan_glfw/src/imgui_impl_glfw.cpp
+    ${CMAKE_SOURCE_DIR}/UnknownEngine/external/IMGUI/vulkan_glfw/src/imgui.cpp
+    ${CMAKE_SOURCE_DIR}/UnknownEngine/external/IMGUI/vulkan_glfw/src/imgui_draw.cpp
+    ${CMAKE_SOURCE_DIR}/UnknownEngine/external/IMGUI/vulkan_glfw/src/imgui_tables.cpp
+    ${CMAKE_SOURCE_DIR}/UnknownEngine/external/IMGUI/vulkan_glfw/src/imgui_widgets.cpp
+    ${CMAKE_SOURCE_DIR}/UnknownEngine/external/IMGUI/vulkan_glfw/src/imgui_impl_vulkan.cpp
+    ${CMAKE_SOURCE_DIR}/UnknownEngine/external/IMGUI/vulkan_glfw/src/imgui_impl_glfw.cpp
     )
 
     add_executable(UnknownEngine ${RENDERER_SOURCE_FILES})
@@ -83,7 +83,6 @@ set(RENDERER_SOURCE_FILES
     target_link_libraries(UnknownEngine PRIVATE Vulkan::Vulkan)
     target_link_libraries(UnknownEngine PRIVATE spdlog::spdlog)
     target_link_libraries(UnknownEngine PRIVATE fmt::fmt)
-    target_link_libraries(UnknownEngine PRIVATE vk-bootstrap::vk-bootstrap)
     target_link_libraries(UnknownEngine PRIVATE glfw)
     target_link_libraries(UnknownEngine PRIVATE assimp::assimp)
     target_link_libraries(UnknownEngine PRIVATE Eigen3::Eigen)
@@ -98,17 +97,30 @@ target_include_directories(UnknownEngine PUBLIC
                           )
 
 target_include_directories(UnknownEngine PRIVATE
-                          "${PROJECT_SOURCE_DIR}/source/external/IMGUI/vulkan_glfw/include"
+                          "${PROJECT_SOURCE_DIR}/external/IMGUI/vulkan_glfw/include"
+                          "${CMAKE_SOURCE_DIR}/UnknownEngine/external/VKBOOTSTRAP/vk-bootstrap/src"
                           )
                           
 target_include_directories(UnknownEngine PUBLIC
                           "${PROJECT_SOURCE_DIR}/source/project"
+                          #"${PROJECT_SOURCE_DIR}/source/project/renderer/vulkan_renderer"
                           )
 
 
 add_subdirectory(tests)
 
 add_subdirectory(experiment)
+
+add_subdirectory(external/VKBOOTSTRAP/vk-bootstrap)
+
+if (WIN32)
+   set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_WIN32_KHR)
+elseif(LINUX)
+   set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_LINUX_KHR)
+endif()
+add_subdirectory(external/VOLK/volk)
+
+target_link_libraries(UnknownEngine PRIVATE vk-bootstrap::vk-bootstrap)
 
 # set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 # set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})

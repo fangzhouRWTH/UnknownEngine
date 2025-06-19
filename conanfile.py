@@ -9,9 +9,10 @@ class RenderEngine(ConanFile):
     generators = "CMakeToolchain", "CMakeDeps"
 
     def requirements(self):
-        self.requires("vulkan-headers/1.3.239.0", override=True)
-        
-        self.requires("vk-bootstrap/0.7")
+        self.requires("vulkan-headers/1.4.309.0")
+        self.requires("vulkan-loader/1.4.309.0")
+
+        #self.requires("vk-bootstrap/0.7")
         self.requires("glfw/3.4")
         self.requires("spdlog/1.14.1")
         self.requires("fmt/10.2.1")

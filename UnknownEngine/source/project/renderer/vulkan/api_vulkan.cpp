@@ -55,7 +55,11 @@ GPUMeshBufferHandle API_Vulkan::upload_mesh(std::span<uint32_t> indices,
   *mGPUMeshBufferTable.Get(handle) = mCore.uploadMesh(indices, vertices);
   return handle;
 }
-void API_Vulkan::remove_mesh(GPUMeshBuffers buffer) 
+void API_Vulkan::test_init_indirect_draw(u64 indicesCount)
+{
+  mCore.init_indirect_draw(indicesCount);
+}
+void API_Vulkan::remove_mesh(GPUMeshBuffers buffer)
 {
     mCore.removeMesh(buffer);
 }

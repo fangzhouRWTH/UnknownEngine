@@ -1,11 +1,11 @@
 #include "framework.hpp"
 #include "renderer/renderer.hpp"
 
-#ifdef API_OPENGL
-#include <glad/glad.h>
-#elif defined(API_VULKAN)
-#define GLFW_INCLUDE_VULKAN
-#endif
+// #ifdef API_OPENGL
+// #include <glad/glad.h>
+// #elif defined(API_VULKAN)
+// #define GLFW_INCLUDE_VULKAN
+// #endif
 
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -63,7 +63,9 @@ namespace unknown
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 #elif defined(API_VULKAN)
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        //glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+
+        if(!info.allowResize)
+            glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 #endif
 
         sMainFramework = std::make_unique<Framework>(info.name, info.width, info.height);

@@ -48,13 +48,13 @@ namespace unknown
         }
 
         template <typename T>
-        T max(T left, T right)
+        T Max(T left, T right)
         {
             return left > right ? left : right;
         }
 
         template <typename T>
-        T min(T left, T right)
+        T Min(T left, T right)
         {
             return left < right ? left : right;
         }
@@ -68,7 +68,7 @@ namespace unknown
         // }
 
         template <typename T>
-        T clamp(T value, T min, T max)
+        T Clamp(T value, T min, T max)
         {
             return value < min ? min : value < max ? value
                                                    : max;

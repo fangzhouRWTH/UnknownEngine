@@ -18,10 +18,10 @@ namespace unknown::math
         // assert(vec.w() <= 255.f);
         // assert(vec.w() >= 0.f);
 
-        u32 _X = u32(clamp(vec.x(), 0.f, 255.f)) & 255u;
-        u32 _Y = u32(clamp(vec.y(), 0.f, 255.f)) & 255u;
-        u32 _Z = u32(clamp(vec.z(), 0.f, 255.f)) & 255u;
-        u32 _W = u32(clamp(vec.w(), 0.f, 255.f)) & 255u;
+        u32 _X = u32(Clamp(vec.x(), 0.f, 255.f)) & 255u;
+        u32 _Y = u32(Clamp(vec.y(), 0.f, 255.f)) & 255u;
+        u32 _Z = u32(Clamp(vec.z(), 0.f, 255.f)) & 255u;
+        u32 _W = u32(Clamp(vec.w(), 0.f, 255.f)) & 255u;
 
         u32 _R = (_X << 24u) &
                  (_Y << 16u) &
@@ -32,10 +32,10 @@ namespace unknown::math
 
     u32 pack_nml_4f_u32(Vec4f vec)
     {
-        u32 _X = u32(clamp(vec.x(), 0.f, 1.f) * 255u) & 255u;
-        u32 _Y = u32(clamp(vec.y(), 0.f, 1.f) * 255u) & 255u;
-        u32 _Z = u32(clamp(vec.z(), 0.f, 1.f) * 255u) & 255u;
-        u32 _W = u32(clamp(vec.w(), 0.f, 1.f) * 255u) & 255u;
+        u32 _X = u32(Clamp(vec.x(), 0.f, 1.f) * 255u) & 255u;
+        u32 _Y = u32(Clamp(vec.y(), 0.f, 1.f) * 255u) & 255u;
+        u32 _Z = u32(Clamp(vec.z(), 0.f, 1.f) * 255u) & 255u;
+        u32 _W = u32(Clamp(vec.w(), 0.f, 1.f) * 255u) & 255u;
 
         u32 _R = (_X << 24u) &
                  (_Y << 16u) &

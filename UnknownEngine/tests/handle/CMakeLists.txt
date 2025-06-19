@@ -22,4 +22,5 @@ target_include_directories(TEST_HANDLE PUBLIC
                           
 target_include_directories(TEST_HANDLE PUBLIC
                           "${CMAKE_SOURCE_DIR}/UnknownEngine/source/project"
+                          "${CMAKE_SOURCE_DIR}/UnknownEngine/experiment"
                           )

@@ -9,7 +9,6 @@ project(UE)
 
 #find package
 find_package(Vulkan REQUIRED)
-find_package(vk-bootstrap REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(fmt REQUIRED)
 find_package(glfw3 REQUIRED)
