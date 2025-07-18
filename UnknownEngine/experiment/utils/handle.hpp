@@ -71,7 +71,7 @@ protected:
 
   void release() { Policy::release(value); }
 
-  u32 value = Policy<Handle>::kInvalid;
+  u32 value = Policy::kInvalid;
   static Policy policy;
 };
 } // namespace unknown

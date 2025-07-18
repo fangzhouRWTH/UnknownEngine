@@ -5,52 +5,14 @@
 
 
 namespace unknown::renderer::vulkan {
-void CommandManager::Init(const CommandManagerInitDesc &desc) {
-  if (bInit)
-    return;
 
-  mDevice = desc.device;
-
-  VkCommandPoolCreateInfo info = {};
-  info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-  info.pNext = nullptr;
-  info.queueFamilyIndex = desc.queueFamilyIndex;
-  info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-
-  VK_CHECK(vkCreateCommandPool(desc.device, &info, nullptr, &mPool));
-
-  bInit = true;
-}
-
-void CommandManager::Reset() {}
-
-void CommandManager::Destroy() {
-  if (!bInit)
-    return;
-  vkDestroyCommandPool(mDevice, mPool, nullptr);
-  bInit = false;
-}
-
-CommandBuffer CommandManager::Create() {
-  VkCommandBufferAllocateInfo allocInfo = {};
-  allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-  allocInfo.pNext = nullptr;
-  allocInfo.commandPool = mPool;
-  allocInfo.commandBufferCount = 1;
-  allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-
-  CommandBuffer buffer;
-  VK_CHECK(vkAllocateCommandBuffers(mDevice, &allocInfo, &buffer.buffer));
-  mBuffers.push_back(buffer);
-
-  return buffer;
-}
-
-void CommandBufferPool::Init(const VkDevice &device, const u32 &queueIndex) {
+void CommandBufferPool::Init(const VkDevice &device, const u32 &queueIndex, const QueueType & type) {
   assert(!bInit);
   bInit = true;
 
   mDevice = device;
+  mQueueFamilyIndex = queueIndex;
+  mQueueType = type;
   VkCommandPoolCreateInfo info = {};
   info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
   info.pNext = nullptr;
@@ -98,6 +60,8 @@ void CommandBufferPool::create()
 
   CommandBuffer buffer;
   VK_CHECK(vkAllocateCommandBuffers(mDevice, &allocInfo, &buffer.buffer));
+
+  buffer.queueType = mQueueType;
   
   mFreeCommandBuffers.push(buffer);
 

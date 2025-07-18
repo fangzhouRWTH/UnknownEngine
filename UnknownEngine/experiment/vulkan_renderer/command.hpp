@@ -9,30 +9,7 @@ namespace unknown::renderer::vulkan {
 
 struct CommandBuffer {
   VkCommandBuffer buffer;
-};
-
-struct CommandManagerInitDesc {
-  uint32_t queueFamilyIndex;
-  VkDevice device;
-};
-
-class CommandManager {
-public:
-  CommandManager() {}
-  ~CommandManager() {}
-  void Init(const CommandManagerInitDesc &desc);
-  void Reset();
-  void Destroy();
-
-  CommandBuffer Create();
-
-private:
-  bool bInit = false;
-  uint32_t mQueueFamilyIndex;
-  VkDevice mDevice;
-  VkCommandPool mPool;
-
-  std::vector<CommandBuffer> mBuffers;
+  QueueType queueType;
 };
 
 class CommandBufferPool {
@@ -40,7 +17,7 @@ public:
   CommandBufferPool() {}
   ~CommandBufferPool() {}
 
-  void Init(const VkDevice &device, const u32 &queueIndex);
+  void Init(const VkDevice &device, const u32 &queueIndex, const QueueType & type);
   void Reset();
   void Destroy();
 
@@ -51,6 +28,7 @@ private:
   void create();
   bool bInit = false;
   u32 mQueueFamilyIndex;
+  QueueType mQueueType;
   VkCommandPool mPool;
   // std::vector<CommandBuffer> mBuffers;
 
@@ -68,7 +46,7 @@ public:
 
     std::shared_ptr<CommandBufferPool> pool =
         std::make_shared<CommandBufferPool>();
-    pool->Init(device, familyIndex);
+    pool->Init(device, familyIndex, queue);
     mPools.insert({queue, pool});
   }
 

@@ -4,12 +4,12 @@
 
 #include "vulkan_renderer/common.hpp"
 
+#include "vulkan_renderer/command.hpp"
 #include "vulkan_renderer/descriptor.hpp"
 #include "vulkan_renderer/device.hpp"
 #include "vulkan_renderer/frame.hpp"
 #include "vulkan_renderer/pipeline.hpp"
 #include "vulkan_renderer/resource.hpp"
-#include "vulkan_renderer/command.hpp"
 #include "vulkan_renderer/swapchain.hpp"
 #include "vulkan_renderer/sync.hpp"
 #include "vulkan_renderer/types.hpp"
@@ -19,6 +19,9 @@
 #include "vulkan_renderer/memAllocation.hpp"
 
 #include "utils/randomGenerator.hpp"
+
+#include "vulkan_renderer/renderGraph.hpp"
+#include "vulkan_renderer/renderPass.hpp"
 
 #include <memory>
 
@@ -46,7 +49,46 @@ public:
 private:
 };
 
+struct TEST_EDGE {};
+
 bool Core::Impl::init(InitDesc desc) {
+
+  RenderGraphBuilder builder;
+
+  std::shared_ptr<IRenderPass> resourcePass =
+      std::make_shared<ResourcePass>("global_resource_pass");
+
+  // std::shared_ptr<IRenderPass> compTex =
+  // std::make_shared<ComputeTestPass>("comp_tex");
+  // std::shared_ptr<IRenderPass> bgPass =
+  //     std::make_shared<BackgroundPass>("bg_pass");
+  std::shared_ptr<IRenderPass> clearPass =
+      std::make_shared<ClearPass>("clear_pass");
+  std::shared_ptr<IRenderPass> meshPass =
+      std::make_shared<MeshTestPass>("mesh_pass");
+  std::shared_ptr<IRenderPass> postPass =
+      std::make_shared<PostProcessTestPass>("post_pass");
+  // std::shared_ptr<IRenderPass> blitPass =
+  //     std::make_shared<BlitPass>("blit_pass");
+
+  builder.AddPrePass(resourcePass);
+
+  builder.AddPass(clearPass);
+  // builder.AddPass(compTex);
+  // builder.AddPass(bgPass);
+  builder.AddPass(meshPass);
+  // builder.AddPass(postPass);
+  // builder.AddPass(blitPass);
+
+  // builder.AddDependency("comp_tex.dst", "mesh_pass.dummy_texture");
+  builder.AddDependency("clear_pass.dst", "mesh_pass.dst");
+  // builder.AddDependency("bg_pass.dst", "mesh_pass.src");
+  // builder.AddDependency("mesh_pass.dst", "post_pass.src");
+  // builder.AddDependency("post_pass.dst", "blitPass.src");
+  builder.MarkOutput("mesh_pass.dst");
+
+  builder.Build();
+
   mContext.viewport.width = desc.width;
   mContext.viewport.height = desc.height;
 
@@ -60,16 +102,25 @@ bool Core::Impl::init(InitDesc desc) {
   auto ist = mContext.device->GetInstance();
   auto srf = mContext.device->GetSurface();
 
+  mContext.synchronizationManager =
+      std::make_shared<SynchronizationManager<FRAME_OVERLAP>>();
+  SyncInitDesc syncDesc;
+  syncDesc.device = dvc;
+  mContext.synchronizationManager->Init(syncDesc);
+
+  mContext.commandBufferManager =
+      std::make_shared<CommandBufferManager<FRAME_OVERLAP>>();
+  mContext.commandBufferManager->Init(mContext.device->GetCoreData());
+
   ResourceManagerDesc reDesc;
   reDesc.uniformAlignment = mContext.device->GetUniformBufferAlignment();
   reDesc.storageAlignment = mContext.device->GetStorageBufferAlignment();
   reDesc.vkData = mContext.device->GetCoreData();
   reDesc.vkData.useTransferQueue = true;
+  reDesc.syncManager = mContext.synchronizationManager;
+  reDesc.cmdManager = mContext.commandBufferManager;
   mContext.resourceManager = std::make_shared<ResourceManager>();
   mContext.resourceManager->Init(reDesc);
-
-  mContext.commandBufferManager = std::make_shared<CommandBufferManager<FRAME_OVERLAP>>();
-  mContext.commandBufferManager->Init(mContext.device->GetCoreData());
 
   UniformDesc uDesc;
   uDesc.name = "scene_data";
@@ -86,11 +137,6 @@ bool Core::Impl::init(InitDesc desc) {
   // uDesc2.update = UniformUpdate::Frame;
   mContext.resourceManager->RegisterUniform(uDesc2);
 
-  mContext.synchronizationManager = std::make_shared<SynchronizationManager>();
-  SyncInitDesc syncDesc;
-  syncDesc.device = dvc;
-  mContext.synchronizationManager->Init(syncDesc);
-
   mContext.pipelineManager = std::make_shared<PipelineManager>();
   PipelineManagerInitDesc pmDesc;
   pmDesc.device = dvc;
@@ -105,41 +151,80 @@ bool Core::Impl::init(InitDesc desc) {
 
   mFrames.Init(mContext);
 
+  /// ASSET
+
+  {
+    ImageDesc imgDesc;
+    // imgDesc.imageFormat.rgba_16_sf().color_aspect();
+    // imgDesc.imageUsage.sample().transfer_dst();
+    // imgDesc.memoryUsage.prefer_device();
+    std::string skyboxPath =
+        "C:/Users/franz/Downloads/Documents/Git/UnknownEngine/UnknownEngine/"
+        "UnknownEngine/assets/images/textures/skybox/BlueSkySkybox.png";
+    mContext.resourceManager->CreateImage(imgDesc, skyboxPath);
+  }
+
+  {
+    DescriptorSetLayoutBuilder skydsl;
+    skydsl.stage_fragment().unifrom_buffer(0); //.combined_image_sampler(1);
+
+    auto dslKey = mContext.pipelineManager->CreateDescriptorSetLayout(skydsl);
+
+    ShaderDesc vertS;
+    vertS.path =
+        "C:/Users/franz/Downloads/Documents/Git/UnknownEngine/UnknownEngine/"
+        "UnknownEngine/"
+        "experiment/expShader/vs_skybox.vert.spv";
+    vertS.type = ShaderType::Vertex;
+
+    ShaderDesc fragS;
+    fragS.path =
+        "C:/Users/franz/Downloads/Documents/Git/UnknownEngine/UnknownEngine/"
+        "UnknownEngine/"
+        "experiment/expShader/fs_skybox.frag.spv";
+    fragS.type = ShaderType::Fragment;
+
+    assert(mContext.pipelineManager->CreateShader(vertS));
+    assert(mContext.pipelineManager->CreateShader(fragS));
+
+    PipelineLayoutDesc plDesc;
+    plDesc.setLayouts.layouts.push_back(dslKey);
+
+    PipelineDesc skyPipelineDesc;
+    skyPipelineDesc.layoutDesc = plDesc;
+    skyPipelineDesc.type = PipelineType::Normal;
+    skyPipelineDesc.shaders.insert({ShaderType::Vertex, vertS});
+    skyPipelineDesc.shaders.insert({ShaderType::Fragment, fragS});
+    mContext.pipelineManager->GetPipeline(skyPipelineDesc);
+
+    mContext.pipelineManager->ClearShaderCache();
+
+    RenderObject skyObject;
+    skyObject.pipelineDesc = skyPipelineDesc;
+    skyObject.bindings.push_back(
+        BindingDesc{.set = 0, .bindingPoint = 0, .name = "scene_data"});
+    mContext.renderObjects.push_back(skyObject);
+  }
+
   {
     DescriptorSetLayoutBuilder taskdsl;
     taskdsl.stage_task().stage_mesh().unifrom_buffer(0).storage_buffer(1);
-    ;
 
     auto dslKey = mContext.pipelineManager->CreateDescriptorSetLayout(taskdsl);
 
-    bool defaultMode = false;
     ShaderDesc taskS;
+    taskS.path =
+        "C:/Users/franz/Downloads/Documents/Git/UnknownEngine/UnknownEngine/"
+        "UnknownEngine/"
+        "experiment/expShader/mesh_test.task.spv";
 
-    if (defaultMode) {
-      taskS.path =
-          "C:/Users/franz/Downloads/Documents/Git/UnknownEngine/UnknownEngine/"
-          "UnknownEngine/"
-          "experiment/expShader/mesh_shader_culling.task.spv";
-    } else {
-      taskS.path =
-          "C:/Users/franz/Downloads/Documents/Git/UnknownEngine/UnknownEngine/"
-          "UnknownEngine/"
-          "experiment/expShader/mesh_test.task.spv";
-    }
     taskS.type = ShaderType::Task;
 
     ShaderDesc meshS;
-    if (defaultMode) {
-      meshS.path =
-          "C:/Users/franz/Downloads/Documents/Git/UnknownEngine/UnknownEngine/"
-          "UnknownEngine/"
-          "experiment/expShader/mesh_shader_culling.mesh.spv";
-    } else {
-      meshS.path =
-          "C:/Users/franz/Downloads/Documents/Git/UnknownEngine/UnknownEngine/"
-          "UnknownEngine/"
-          "experiment/expShader/mesh_test.mesh.spv";
-    }
+    meshS.path =
+        "C:/Users/franz/Downloads/Documents/Git/UnknownEngine/UnknownEngine/"
+        "UnknownEngine/"
+        "experiment/expShader/mesh_test.mesh.spv";
     meshS.type = ShaderType::Mesh;
 
     ShaderDesc fragS;
@@ -193,7 +278,11 @@ bool Core::Impl::init(InitDesc desc) {
   return true;
 }
 
-void Core::Impl::preframe() { mFrames.Wait(mContext); }
+void Core::Impl::preframe() {
+  mFrames.Wait(mContext);
+  mContext.commandBufferManager->ResetCurrentPoolSets();
+  mContext.synchronizationManager->ResetFrameResource();
+}
 
 void Core::Impl::frame() {
   // resource?
@@ -210,6 +299,8 @@ void Core::Impl::frame() {
   sceneData.view = tempData.view;
   sceneData.proj = tempData.proj;
   sceneData.view_proj = tempData.view_proj;
+  sceneData.view_inv = tempData.view.inverse();
+  sceneData.proj_inv = tempData.proj.inverse();
 
   sceneData.instanceCount = instanceCount;
 
@@ -231,9 +322,10 @@ void Core::Impl::frame() {
   mFrames.Present(mContext);
 }
 
-void Core::Impl::postframe() { 
-  mFrames.Advance(); 
+void Core::Impl::postframe() {
+  mFrames.Advance();
   mContext.commandBufferManager->Advance();
+  mContext.synchronizationManager->Advance();
 }
 
 void Core::Impl::shutdown() {
@@ -243,9 +335,9 @@ void Core::Impl::shutdown() {
 
   mContext.pipelineManager->Destroy();
   mContext.globalDescriptorSetAllocator->Destroy();
-  mContext.synchronizationManager->Destroy();
   mContext.commandBufferManager->Destroy();
   mContext.resourceManager->Destroy();
+  mContext.synchronizationManager->Destroy();
   mContext.device->ShutDown();
 }
 

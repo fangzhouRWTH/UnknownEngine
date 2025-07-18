@@ -61,29 +61,29 @@ void Frame::Render(VulkanContext ctx, VkImage scImage) {
   info.pInheritanceInfo = nullptr;
   info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-  ctx.resourceManager->FlushFrameResource(
-      ctx.commandBufferManager, mSwapchainSemaphore, mResourceSemaphore);
-
-  // VK_CHECK(vkBeginCommandBuffer(mCmdBuffer.buffer, &info));
+  ctx.resourceManager->FlushFrameResource(mSwapchainSemaphore,
+                                          mResourceSemaphore);
 
   auto cb = ctx.commandBufferManager->BeginCommandBuffer(QueueType::Graphic);
 
   {
     auto targetImage = ctx.resourceManager->GetImage(mColorTarget);
     ImageTransitionDesc colordesc;
-    colordesc.cmd = cb.buffer; // mCmdBuffer.buffer;
+    colordesc.cmd = cb.buffer;
     colordesc.image = targetImage.image;
     colordesc.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     colordesc.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    TransitionImageResource(colordesc);
+    //TransitionImageResource(colordesc);
+    ctx.resourceManager->TransitionImage(mColorTarget,colordesc);
 
     auto targetDepth = ctx.resourceManager->GetImage(mDepthTarget);
     ImageTransitionDesc depthdesc;
-    depthdesc.cmd = cb.buffer; // mCmdBuffer.buffer;
+    depthdesc.cmd = cb.buffer;
     depthdesc.image = targetDepth.image;
     depthdesc.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     depthdesc.newLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
-    TransitionImageResource(depthdesc);
+    //TransitionImageResource(depthdesc);
+    ctx.resourceManager->TransitionImage(mDepthTarget,depthdesc);
   }
 
   {
@@ -122,7 +122,6 @@ void Frame::Render(VulkanContext ctx, VkImage scImage) {
     renderInfo.pDepthAttachment = &depthAttachment;
     renderInfo.pStencilAttachment = nullptr;
 
-    // vkCmdBeginRendering(mCmdBuffer.buffer, &renderInfo);
     {
       auto bindingInfo = ctx.resourceManager->GetBindingInfo("scene_data");
       auto &buffer = ctx.resourceManager->GetBuffer(bindingInfo.handle);
@@ -130,40 +129,12 @@ void Frame::Render(VulkanContext ctx, VkImage scImage) {
       auto tQueue = ctx.device->GetCoreData().transferQueueFamily;
       auto gQueue = ctx.device->GetCoreData().graphicsQueueFamily;
 
-      if (buffer.state.ownerQueueType != QueueType::Graphic) {
-        //auto qindex = ctx.device->GetCoreData().graphicsQueueFamily;
-        VkBufferMemoryBarrier srcBarrier =
-            SynchronizationManager::CreateBufferMemoryBarrier(
-                0, VK_ACCESS_SHADER_READ_BIT, buffer.buffer,
-                tQueue, gQueue);
-        buffer.state.queueFamilyIndex = gQueue;
-        buffer.state.ownerQueueType = QueueType::Graphic;
-
-        vkCmdPipelineBarrier(cb.buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                             VK_PIPELINE_STAGE_TASK_SHADER_BIT_EXT, 0, 0,
-                             nullptr, 1, &srcBarrier, 0, nullptr);
-      }
-
       u32 sceneDataOffset =
           bindingInfo.global_offset + bindingInfo.local_offset;
       auto instanceBindingInfo =
           ctx.resourceManager->GetBindingInfo("instance_data");
       auto &instanceBuffer =
           ctx.resourceManager->GetBuffer(instanceBindingInfo.handle);
-
-      if (instanceBuffer.state.ownerQueueType != QueueType::Graphic) {
-        //auto qindex = ctx.device->GetCoreData().graphicsQueueFamily;
-        VkBufferMemoryBarrier srcBarrier =
-            SynchronizationManager::CreateBufferMemoryBarrier(
-                0, VK_ACCESS_SHADER_READ_BIT, instanceBuffer.buffer,
-                tQueue, gQueue);
-        instanceBuffer.state.queueFamilyIndex = gQueue;
-        instanceBuffer.state.ownerQueueType = QueueType::Graphic;
-
-        vkCmdPipelineBarrier(cb.buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                             VK_PIPELINE_STAGE_TASK_SHADER_BIT_EXT, 0, 0,
-                             nullptr, 1, &srcBarrier, 0, nullptr);
-      }
     }
     vkCmdBeginRendering(cb.buffer, &renderInfo);
 
@@ -191,72 +162,102 @@ void Frame::Render(VulkanContext ctx, VkImage scImage) {
     }
   }
 
-  if (ctx.renderObjects.size() >= 1) {
+  for (auto &renderObj : ctx.renderObjects) {
 
-    auto &renderObj = ctx.renderObjects[0];
+    switch (renderObj.pipelineDesc.type) {
+    case PipelineType::Mesh: {
+      DescriptorSetAllocDesc allocDesc;
+      for (auto k : renderObj.pipelineDesc.layoutDesc.setLayouts.layouts) {
+        auto dlayout = ctx.pipelineManager->GetDescriptorSetLayout(k);
+        allocDesc.layouts.push_back(dlayout.data);
+      }
+      auto sets = mDescriptorSetAllocator.Allocate(allocDesc);
 
-    DescriptorSetAllocDesc allocDesc;
-    for (auto k : renderObj.pipelineDesc.layoutDesc.setLayouts.layouts) {
-      auto dlayout = ctx.pipelineManager->GetDescriptorSetLayout(k);
-      allocDesc.layouts.push_back(dlayout.data);
+      {
+        DescriptorSetBinder binder(mDevice, sets[0]);
+
+        auto bindingInfo = ctx.resourceManager->GetBindingInfo("scene_data");
+        auto &buffer = ctx.resourceManager->GetBuffer(bindingInfo.handle);
+
+        u32 sceneDataOffset =
+            bindingInfo.global_offset + bindingInfo.local_offset;
+        auto instanceBindingInfo =
+            ctx.resourceManager->GetBindingInfo("instance_data");
+        auto &instanceBuffer =
+            ctx.resourceManager->GetBuffer(instanceBindingInfo.handle);
+
+        u32 instanceDataOffset = instanceBindingInfo.global_offset +
+                                 instanceBindingInfo.local_offset;
+
+        binder.buffer(0, buffer, bindingInfo.alloc.size, sceneDataOffset,
+                      VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+
+        binder.buffer(1, instanceBuffer, instanceBindingInfo.alloc.size,
+                      instanceDataOffset, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+
+        binder.write();
+      }
+
+      auto pipeline = ctx.pipelineManager->GetPipeline(renderObj.pipelineDesc);
+      auto pipelineLayout = ctx.pipelineManager->GetPipelineLayout(
+          renderObj.pipelineDesc.layoutDesc);
+
+      vkCmdBindPipeline(cb.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        pipeline.data);
+      vkCmdBindDescriptorSets(cb.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                              pipelineLayout.data, 0, sets.size(), sets.data(),
+                              0, nullptr);
+
+      u32 N = 4;
+      u32 num_workgroups_x = N;
+      u32 num_workgroups_y = N;
+      u32 num_workgroups_z = N;
+
+      vkCmdDrawMeshTasksEXT(cb.buffer, num_workgroups_x, num_workgroups_y,
+                            num_workgroups_z);
+      break;
     }
-    auto sets = mDescriptorSetAllocator.Allocate(allocDesc);
+    case PipelineType::Normal: {
+      DescriptorSetAllocDesc allocDesc;
+      for (auto k : renderObj.pipelineDesc.layoutDesc.setLayouts.layouts) {
+        auto dlayout = ctx.pipelineManager->GetDescriptorSetLayout(k);
+        allocDesc.layouts.push_back(dlayout.data);
+      }
+      auto sets = mDescriptorSetAllocator.Allocate(allocDesc);
 
-    {
-      DescriptorSetBinder binder(mDevice, sets[0]);
+      {
+        DescriptorSetBinder binder(mDevice, sets[0]);
+        auto binding = renderObj.bindings[0];
+        auto bindingInfo = ctx.resourceManager->GetBindingInfo(binding.name);
+        auto &buffer = ctx.resourceManager->GetBuffer(bindingInfo.handle);
 
-      auto bindingInfo = ctx.resourceManager->GetBindingInfo("scene_data");
-      auto &buffer = ctx.resourceManager->GetBuffer(bindingInfo.handle);
+        u32 sceneDataOffset =
+            bindingInfo.global_offset + bindingInfo.local_offset;
 
-      u32 sceneDataOffset =
-          bindingInfo.global_offset + bindingInfo.local_offset;
-      auto instanceBindingInfo =
-          ctx.resourceManager->GetBindingInfo("instance_data");
-      auto &instanceBuffer =
-          ctx.resourceManager->GetBuffer(instanceBindingInfo.handle);
+        binder.buffer(0, buffer, bindingInfo.alloc.size, sceneDataOffset,
+                      VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 
-      u32 instanceDataOffset =
-          instanceBindingInfo.global_offset + instanceBindingInfo.local_offset;
+        binder.write();
+      }
 
-      binder.buffer(0, buffer, bindingInfo.alloc.size, sceneDataOffset,
-                    VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+      auto pipeline = ctx.pipelineManager->GetPipeline(renderObj.pipelineDesc);
+      auto pipelineLayout = ctx.pipelineManager->GetPipelineLayout(
+          renderObj.pipelineDesc.layoutDesc);
 
-      binder.buffer(1, instanceBuffer, instanceBindingInfo.alloc.size,
-                    instanceDataOffset, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+      vkCmdBindPipeline(cb.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                        pipeline.data);
+      vkCmdBindDescriptorSets(cb.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                              pipelineLayout.data, 0, sets.size(), sets.data(),
+                              0, nullptr);
 
-      binder.write();
+      vkCmdDraw(cb.buffer, 3, 1, 0, 0);
+      break;
     }
-
-    auto pipeline = ctx.pipelineManager->GetPipeline(renderObj.pipelineDesc);
-    auto pipelineLayout = ctx.pipelineManager->GetPipelineLayout(
-        renderObj.pipelineDesc.layoutDesc);
-
-    // vkCmdBindPipeline(mCmdBuffer.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-    //                   pipeline.data);
-    // vkCmdBindDescriptorSets(mCmdBuffer.buffer,
-    // VK_PIPELINE_BIND_POINT_GRAPHICS,
-    //                         pipelineLayout.data, 0, sets.size(), sets.data(),
-    //                         0, nullptr);
-
-    vkCmdBindPipeline(cb.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                      pipeline.data);
-    vkCmdBindDescriptorSets(cb.buffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            pipelineLayout.data, 0, sets.size(), sets.data(), 0,
-                            nullptr);
-
-    u32 N = 4;
-    u32 num_workgroups_x = N;
-    u32 num_workgroups_y = N;
-    u32 num_workgroups_z = N;
-
-    // vkCmdDrawMeshTasksEXT(mCmdBuffer.buffer, num_workgroups_x,
-    // num_workgroups_y,
-    //                       num_workgroups_z);
-    vkCmdDrawMeshTasksEXT(cb.buffer, num_workgroups_x, num_workgroups_y,
-                          num_workgroups_z);
+    default:
+      break;
+    }
   }
 
-  // vkCmdEndRendering(mCmdBuffer.buffer);
   vkCmdEndRendering(cb.buffer);
 
   {
@@ -266,39 +267,11 @@ void Frame::Render(VulkanContext ctx, VkImage scImage) {
     auto tQueue = ctx.device->GetCoreData().transferQueueFamily;
     auto gQueue = ctx.device->GetCoreData().graphicsQueueFamily;
 
-    //if (buffer.state.ownerQueueType != QueueType::Transfer) 
-    {
-      auto qindex = ctx.device->GetCoreData().graphicsQueueFamily;
-      VkBufferMemoryBarrier srcBarrier =
-          SynchronizationManager::CreateBufferMemoryBarrier(
-              VK_ACCESS_SHADER_READ_BIT, 0, buffer.buffer, gQueue, tQueue);
-      // buffer.state.queueFamilyIndex = qindex;
-      // buffer.state.ownerQueueType = QueueType::Graphic;
-
-      vkCmdPipelineBarrier(cb.buffer, VK_PIPELINE_STAGE_TASK_SHADER_BIT_EXT,
-                           VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr,
-                           1, &srcBarrier, 0, nullptr);
-    }
-
     u32 sceneDataOffset = bindingInfo.global_offset + bindingInfo.local_offset;
     auto instanceBindingInfo =
         ctx.resourceManager->GetBindingInfo("instance_data");
     auto &instanceBuffer =
         ctx.resourceManager->GetBuffer(instanceBindingInfo.handle);
-
-    //if (instanceBuffer.state.ownerQueueType != QueueType::Graphic) 
-    {
-      // auto qindex = ctx.device->GetCoreData().tran;
-      VkBufferMemoryBarrier srcBarrier =
-          SynchronizationManager::CreateBufferMemoryBarrier(
-              VK_ACCESS_SHADER_READ_BIT, 0, instanceBuffer.buffer, gQueue, tQueue);
-      // instanceBuffer.state.queueFamilyIndex = qindex;
-      // instanceBuffer.state.ownerQueueType = QueueType::Graphic;
-
-      vkCmdPipelineBarrier(cb.buffer, VK_PIPELINE_STAGE_TASK_SHADER_BIT_EXT,
-                           VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr,
-                           1, &srcBarrier, 0, nullptr);
-    }
   }
 
   {
@@ -308,7 +281,8 @@ void Frame::Render(VulkanContext ctx, VkImage scImage) {
     colordesc.image = ctx.resourceManager->GetImage(mColorTarget).image;
     colordesc.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     colordesc.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-    TransitionImageResource(colordesc);
+    //TransitionImageResource(colordesc);
+    ctx.resourceManager->TransitionImage(mColorTarget,colordesc);
 
     ImageTransitionDesc swapdesc;
     // swapdesc.cmd = mCmdBuffer.buffer;
@@ -317,6 +291,7 @@ void Frame::Render(VulkanContext ctx, VkImage scImage) {
     swapdesc.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     swapdesc.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     TransitionImageResource(swapdesc);
+    //ctx.resourceManager->TransitionImage(mColorTarget,colordesc);
 
     CopyImageToImageDesc copyDesc;
     // copyDesc.cmd = mCmdBuffer.buffer;
@@ -345,20 +320,18 @@ void Frame::Render(VulkanContext ctx, VkImage scImage) {
     TransitionImageResource(desc);
   }
 
-  // VK_CHECK(vkEndCommandBuffer(mCmdBuffer.buffer));
-  // VK_CHECK(vkEndCommandBuffer(cb.buffer));
   ctx.commandBufferManager->EndCommandBuffer(cb);
 
   VkCommandBufferSubmitInfo cmdinfo = {};
   cmdinfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
   cmdinfo.pNext = nullptr;
-  cmdinfo.commandBuffer = cb.buffer; // mCmdBuffer.buffer;
+  cmdinfo.commandBuffer = cb.buffer;
   cmdinfo.deviceMask = 0;
 
   VkSemaphoreSubmitInfo waitinfo = {};
   waitinfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
   waitinfo.pNext = nullptr;
-  // waitinfo.semaphore = mSwapchainSemaphore.data;
+
   waitinfo.semaphore = mResourceSemaphore.data;
   waitinfo.stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR;
   waitinfo.deviceIndex = 0;

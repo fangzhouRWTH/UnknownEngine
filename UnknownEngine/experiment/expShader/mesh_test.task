@@ -20,6 +20,9 @@ layout(binding = 0) uniform UBO {
   mat4 proj;
   mat4 view_proj;
 
+  mat4 view_inv;
+  mat4 proj_inv;
+
   vec4 color1;
   vec4 color2;
   vec4 color3;

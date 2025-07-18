@@ -1,22 +1,80 @@
 #include "vulkan_renderer/resourceAllocator.hpp"
-#include "vulkan_renderer/sync.hpp"
 #include "resourceAllocator.hpp"
+#include "utils/imageLoader.hpp"
+#include "vulkan_renderer/defines.hpp"
+#include "vulkan_renderer/sync.hpp"
 
 namespace unknown::renderer::vulkan {
 GPUResourceAllocator::~GPUResourceAllocator() {}
 
-void GPUResourceAllocator::Init(const VulkanCoreData &vkData) {
-  // mPhysicalDevice = vkData.physicalDevice;
-  // mDevice = vkData.device;
-  // mInstance = vkData.instance;
+ResourceUsageInfo getResourceUsageInfo(const ResourceUsage &usage) {
+  ResourceUsageInfo info;
 
-  // if (mUseTransferQueue = vkData.useTransferQueue, mUseTransferQueue) {
-  //   mQueueFamilyIndex = vkData.transferQueueFamily;
-  //   mQueue = vkData.transferQueue;
-  // } else {
-  //   mQueueFamilyIndex = vkData.graphicsQueueFamily;
-  //   mQueue = vkData.graphicsQueue;
-  // }
+  switch (usage) {
+  case ResourceUsage::TransferSrc:
+    break;
+  case ResourceUsage::TransferDst:
+    break;
+  default:
+    assert(false);
+  }
+  return info;
+}
+
+ResourceOwnershipInfo GPUResourceAllocator::getResourceTransferInfo(
+    const ResourceOwnershipTransition &transition) {
+  ResourceOwnershipInfo info;
+  switch (transition) {
+  case ResourceOwnershipTransition::Acquire_Graphic_Transfer:
+    info.src.access = VK_ACCESS_NONE;
+    info.src.stage = VK_PIPELINE_STAGE_NONE;
+    info.src.queue = QueueType::Graphic;
+    info.src.index = mVkData.graphicsQueueFamily;
+
+    info.dst.access = VK_ACCESS_TRANSFER_WRITE_BIT;
+    info.dst.stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    info.dst.queue = QueueType::Transfer;
+    info.dst.index = mVkData.transferQueueFamily;
+    break;
+  case ResourceOwnershipTransition::Release_Transfer_Graphic:
+    info.src.access = VK_ACCESS_TRANSFER_WRITE_BIT;
+    info.src.stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    info.src.queue = QueueType::Transfer;
+    info.src.index = mVkData.transferQueueFamily;
+
+    info.dst.access = VK_ACCESS_NONE;
+    info.dst.stage = VK_PIPELINE_STAGE_NONE;
+    info.dst.queue = QueueType::Graphic;
+    info.dst.index = mVkData.graphicsQueueFamily;
+    break;
+  default:
+    assert(false);
+  }
+
+  return info;
+}
+
+void GPUResourceAllocator::getQueueInfo(QueueType type, VkQueue &queue,
+                                        u32 &index) {
+  switch (type) {
+  case QueueType::Graphic:
+    queue = mVkData.graphicsQueue;
+    index = mVkData.graphicsQueueFamily;
+    break;
+  case QueueType::Transfer:
+    queue = mVkData.transferQueue;
+    index = mVkData.transferQueueFamily;
+    break;
+  case QueueType::Compute:
+    queue = mVkData.computeQueue;
+    index = mVkData.computeQueueFamily;
+    break;
+  default:
+    break;
+  }
+}
+
+void GPUResourceAllocator::Init(const VulkanCoreData &vkData) {
   mVkData = vkData;
 
   VmaAllocatorCreateInfo allocatorInfo = {};
@@ -67,7 +125,7 @@ BufferHandle GPUResourceAllocator::CreateBuffer(const BufferDesc &desc) {
   VK_CHECK(vmaCreateBuffer(mAllocator, &bInfo, &vmaAllocation, &buffer.buffer,
                            &buffer.allocation, &buffer.info));
 
-  if(buffer.state.isMapped)
+  if (buffer.state.isMapped)
     vmaMapMemory(mAllocator, buffer.allocation, &buffer.state.mapPtr);
 
   BufferHandle handle = mBuffers.addResource(buffer);
@@ -81,7 +139,7 @@ Buffer GPUResourceAllocator::GetBuffer(const BufferHandle &handle) const {
   return mBuffers.getResource(handle);
 }
 
-Buffer & GPUResourceAllocator::GetBuffer(const BufferHandle &handle) {
+Buffer &GPUResourceAllocator::GetBuffer(const BufferHandle &handle) {
   return mBuffers.getResource(handle);
 }
 
@@ -146,6 +204,210 @@ Image GPUResourceAllocator::GetImage(const ImageHandle &handle) {
   return mImages.getResource(handle);
 }
 
+void GPUResourceAllocator::TransitionImageResource(const VkCommandBuffer &cmd,
+                                                   const ImageHandle &handle,
+                                                   VkImageLayout dst) {
+  auto & img = mImages.getResource(handle);
+
+  VkImageMemoryBarrier2 imageBarrier{};
+  imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+  imageBarrier.pNext = nullptr;
+  imageBarrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+  imageBarrier.srcAccessMask = VK_ACCESS_2_MEMORY_WRITE_BIT;
+  imageBarrier.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+  imageBarrier.dstAccessMask =
+      VK_ACCESS_2_MEMORY_WRITE_BIT | VK_ACCESS_2_MEMORY_READ_BIT;
+
+  imageBarrier.oldLayout = img.layout;
+  imageBarrier.newLayout = dst;
+
+  VkImageAspectFlags aspectMask =
+      (dst == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL)
+          ? VK_IMAGE_ASPECT_DEPTH_BIT
+          : VK_IMAGE_ASPECT_COLOR_BIT;
+
+  VkImageSubresourceRange range{};
+  range.aspectMask = aspectMask;
+  range.baseMipLevel = 0u;
+  range.levelCount = VK_REMAINING_MIP_LEVELS;
+  range.baseArrayLayer = 0u;
+  range.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+  imageBarrier.subresourceRange = range;
+  imageBarrier.image = img.image;
+
+  VkDependencyInfo dependencyInfo{};
+  dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+  dependencyInfo.pNext = nullptr;
+  dependencyInfo.imageMemoryBarrierCount = 1u;
+  dependencyInfo.pImageMemoryBarriers = &imageBarrier;
+  vkCmdPipelineBarrier2(cmd, &dependencyInfo);
+
+  img.layout = dst;
+}
+
+struct ImageTransitionInfo {
+  VkPipelineStageFlags sourceStage;
+  VkPipelineStageFlags destinationStage;
+  VkImageMemoryBarrier barrier;
+};
+
+ImageTransitionInfo transition_image_layout(bool transferQueue,
+                                            VkQueue graphicsQueue,
+                                            VkImage image, VkFormat format,
+                                            VkImageLayout oldLayout,
+                                            VkImageLayout newLayout) {
+  VkImageMemoryBarrier barrier{};
+  barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+  barrier.oldLayout = oldLayout;
+  barrier.newLayout = newLayout;
+
+  barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+  barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+  barrier.image = image;
+
+  barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  barrier.subresourceRange.baseMipLevel = 0;
+  barrier.subresourceRange.levelCount = 1;
+  barrier.subresourceRange.baseArrayLayer = 0;
+  barrier.subresourceRange.layerCount = 1;
+
+  VkPipelineStageFlags sourceStage;
+  VkPipelineStageFlags destinationStage;
+
+  if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
+      newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+    barrier.srcAccessMask = 0;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+  } else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+             newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+    sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+    if (transferQueue) {
+      destinationStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+      barrier.dstAccessMask = 0;
+    } else {
+      destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+      barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    }
+
+  } else {
+    throw std::invalid_argument("unsupported layout transition!");
+  }
+
+  return {sourceStage, destinationStage, barrier};
+}
+
+ImageHandle GPUResourceAllocator::LoadCreateImage(
+    std::shared_ptr<CommandBufferManager<FRAME_OVERLAP>> &cmdManager,
+    bool useTransferQueue, ImageDesc &desc, const std::string &filePath,
+    u32 &width, u32 &height, u32 &channels) {
+  // TODO
+
+  bool transferQueue = (useTransferQueue && mVkData.useTransferQueue &&
+                        mVkData.hasTransferQueue);
+
+  auto ptr = ImageLoader::Load(filePath, width, height, channels);
+  assert(ptr != nullptr);
+  u32 size = width * height * channels;
+  BufferDesc bDesc;
+  bDesc.bufferUsage.transfer_src();
+  bDesc.memoryUsage.prefer_host();
+  bDesc.memoryProperty.staging();
+  bDesc.size = size;
+  auto stagingHandle = CreateBuffer(bDesc);
+  auto stagingBuffer = GetBuffer(stagingHandle);
+
+  MapCopyBuffer((void *)ptr, stagingHandle, 0u, size);
+
+  ImageLoader::Free(ptr);
+
+  // TODO
+  ImageDesc &d = desc;
+  d.imageFormat.size(width, height);
+  d.imageFormat.rgba_8_srgb().color_aspect();
+  d.imageUsage.sample().transfer_dst();
+  d.memoryUsage.prefer_device();
+  auto imageHandle = CreateImage(d);
+  auto image = GetImage(imageHandle);
+
+  VkQueue queue;
+  if (transferQueue)
+    queue = mVkData.transferQueue;
+  else
+    queue = mVkData.graphicsQueue;
+
+  CommandBuffer cmd;
+  if (transferQueue)
+    cmd = cmdManager->BeginCommandBuffer(QueueType::Transfer);
+  else
+    cmd = cmdManager->BeginCommandBuffer(QueueType::Graphic);
+
+  auto preTrans = transition_image_layout(
+      transferQueue, queue, image.image, VK_FORMAT_R8G8B8_SRGB,
+      VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+  vkCmdPipelineBarrier(cmd.buffer, preTrans.sourceStage,
+                       preTrans.destinationStage, 0, 0, nullptr, 0, nullptr, 1,
+                       &preTrans.barrier);
+
+  {
+    VkBufferImageCopy region{};
+    region.bufferOffset = 0;
+    region.bufferRowLength = 0; // tightly packed
+    region.bufferImageHeight = 0;
+
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.mipLevel = 0;
+    region.imageSubresource.baseArrayLayer = 0;
+    region.imageSubresource.layerCount = 1;
+
+    region.imageOffset = {0, 0, 0};
+    region.imageExtent = {width, height, 1};
+
+    vkCmdCopyBufferToImage(cmd.buffer, stagingBuffer.buffer, image.image,
+                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+  }
+
+  auto postTrans = transition_image_layout(
+      transferQueue, queue, image.image, VK_FORMAT_R8G8B8_SRGB,
+      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+  vkCmdPipelineBarrier(cmd.buffer, postTrans.sourceStage,
+                       postTrans.destinationStage, 0, 0, nullptr, 0, nullptr, 1,
+                       &postTrans.barrier);
+
+  if (transferQueue) {
+    ReleaseOwnership(cmd, imageHandle, QueueType::Transfer, QueueType::Graphic);
+    AcquireOwnership(cmd, imageHandle, QueueType::Transfer, QueueType::Graphic);
+  }
+
+  cmdManager->EndCommandBuffer(cmd);
+
+  VkSubmitInfo submitInfo{};
+  submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+  submitInfo.commandBufferCount = 1;
+  submitInfo.pCommandBuffers = &cmd.buffer;
+
+  vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
+  vkQueueWaitIdle(queue);
+
+  Release(stagingHandle);
+  // ReleaseBuffer(stagingHandle);
+
+  return imageHandle;
+}
+
 void GPUResourceAllocator::Release(const ImageHandle &handle) {
   auto res = mImages.getResource(handle);
   mImages.releaseResource(handle);
@@ -173,14 +435,210 @@ void GPUResourceAllocator::ReleaseAllImages() {
   mImages.resetContainer();
 }
 
+void GPUResourceAllocator::ReleaseOwnership(const CommandBuffer &cmd,
+                                            BufferHandle handle, QueueType from,
+                                            QueueType to) {
+  // todo
+  VkQueue fromQ, toQ;
+  u32 fromI, toI;
+  getQueueInfo(from, fromQ, fromI);
+  getQueueInfo(to, toQ, toI);
+
+  if (fromI == toI)
+    return;
+
+  VkAccessFlags srcAccess;
+  VkAccessFlags dstAccess;
+  VkPipelineStageFlags srcStage;
+  VkPipelineStageFlags dstStage;
+
+  if (from == QueueType::Graphic && to == QueueType::Transfer) {
+    srcAccess = VK_ACCESS_SHADER_READ_BIT;
+    dstAccess = 0;
+    srcStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+    dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+  } else if (from == QueueType::Transfer && to == QueueType::Graphic) {
+    srcAccess = VK_ACCESS_TRANSFER_READ_BIT;
+    dstAccess = 0;
+    srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+  } else {
+    // todo
+    return;
+  }
+
+  auto buffer = GetBuffer(handle);
+  VkBufferMemoryBarrier srcBarrier =
+      SynchronizationManager<FRAME_OVERLAP>::CreateBufferMemoryBarrier(
+          srcAccess, dstAccess, buffer.buffer, fromI, toI);
+
+  vkCmdPipelineBarrier(cmd.buffer, srcStage, dstStage, 0, 0, nullptr, 1,
+                       &srcBarrier, 0, nullptr);
+}
+
+void GPUResourceAllocator::AcquireOwnership(const CommandBuffer &cmd,
+                                            BufferHandle handle, QueueType from,
+                                            QueueType to) {
+  // todo
+  VkQueue fromQ, toQ;
+  u32 fromI, toI;
+  getQueueInfo(from, fromQ, fromI);
+  getQueueInfo(to, toQ, toI);
+
+  if (fromI == toI)
+    return;
+
+  VkAccessFlags srcAccess;
+  VkAccessFlags dstAccess;
+  VkPipelineStageFlags srcStage;
+  VkPipelineStageFlags dstStage;
+
+  if (from == QueueType::Graphic && to == QueueType::Transfer) {
+    srcAccess = 0;
+    dstAccess = VK_ACCESS_TRANSFER_WRITE_BIT;
+    srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+  } else if (from == QueueType::Transfer && to == QueueType::Graphic) {
+    srcAccess = 0;
+    dstAccess = VK_ACCESS_SHADER_READ_BIT;
+    srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    dstStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+  } else {
+    // todo
+    return;
+  }
+
+  auto buffer = GetBuffer(handle);
+  VkBufferMemoryBarrier srcBarrier =
+      SynchronizationManager<FRAME_OVERLAP>::CreateBufferMemoryBarrier(
+          srcAccess, dstAccess, buffer.buffer, fromI, toI);
+
+  vkCmdPipelineBarrier(cmd.buffer, srcStage, dstStage, 0, 0, nullptr, 1,
+                       &srcBarrier, 0, nullptr);
+}
+
+void GPUResourceAllocator::ReleaseOwnership(const CommandBuffer &cmd,
+                                            ImageHandle handle, QueueType from,
+                                            QueueType to) {
+  // VkQueue fromQ, toQ;
+  // u32 fromI, toI;
+  // getQueueInfo(from, fromQ, fromI);
+  // getQueueInfo(to, toQ, toI);
+
+  // if (fromI == toI)
+  //   return;
+
+  // VkAccessFlags srcAccess;
+  // VkAccessFlags dstAccess;
+  // VkPipelineStageFlags srcStage;
+  // VkPipelineStageFlags dstStage;
+
+  // if (from == QueueType::Graphic && to == QueueType::Transfer) {
+  //   srcAccess = VK_ACCESS_SHADER_READ_BIT;
+  //   dstAccess = 0;
+  //   srcStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+  //   dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+  // } else if (from == QueueType::Transfer && to == QueueType::Graphic) {
+  //   srcAccess = VK_ACCESS_TRANSFER_READ_BIT;
+  //   dstAccess = 0;
+  //   srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+  //   dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+  // } else {
+  //   // todo
+  //   return;
+  // }
+
+  // //TransitionImageResource(cmd.buffer,handle,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+  // auto & img = mImages.getResource(handle);
+
+  // VkImageMemoryBarrier2 imageBarrier{};
+  // imageBarrier.srcQueueFamilyIndex = fromI;
+  // imageBarrier.dstQueueFamilyIndex = toI;
+  // imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2;
+  // imageBarrier.pNext = nullptr;
+  // imageBarrier.srcStageMask = srcStage;
+  // imageBarrier.srcAccessMask = srcAccess;
+  // imageBarrier.dstStageMask = dstStage;
+  // imageBarrier.dstAccessMask = dstAccess;
+
+  // imageBarrier.oldLayout = img.layout;
+  // imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+  // VkImageAspectFlags aspectMask =
+  //     (dst == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL)
+  //         ? VK_IMAGE_ASPECT_DEPTH_BIT
+  //         : VK_IMAGE_ASPECT_COLOR_BIT;
+
+  // VkImageSubresourceRange range{};
+  // range.aspectMask = aspectMask;
+  // range.baseMipLevel = 0u;
+  // range.levelCount = VK_REMAINING_MIP_LEVELS;
+  // range.baseArrayLayer = 0u;
+  // range.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+  // imageBarrier.subresourceRange = range;
+  // imageBarrier.image = img.image;
+
+  // VkDependencyInfo dependencyInfo{};
+  // dependencyInfo.sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO;
+  // dependencyInfo.pNext = nullptr;
+  // dependencyInfo.imageMemoryBarrierCount = 1u;
+  // dependencyInfo.pImageMemoryBarriers = &imageBarrier;
+  // vkCmdPipelineBarrier2(cmd, &dependencyInfo);
+
+  // img.layout = dst;
+}
+
+void GPUResourceAllocator::AcquireOwnership(const CommandBuffer &cmd,
+                                            ImageHandle handle, QueueType from,
+                                            QueueType to) {
+  // // todo
+  // VkQueue fromQ, toQ;
+  // u32 fromI, toI;
+  // getQueueInfo(from, fromQ, fromI);
+  // getQueueInfo(to, toQ, toI);
+
+  // if (fromI == toI)
+  //   return;
+
+  // VkAccessFlags srcAccess;
+  // VkAccessFlags dstAccess;
+  // VkPipelineStageFlags srcStage;
+  // VkPipelineStageFlags dstStage;
+
+  // if (from == QueueType::Graphic && to == QueueType::Transfer) {
+  //   srcAccess = 0;
+  //   dstAccess = VK_ACCESS_TRANSFER_WRITE_BIT;
+  //   srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+  //   dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+  // } else if (from == QueueType::Transfer && to == QueueType::Graphic) {
+  //   srcAccess = 0;
+  //   dstAccess = VK_ACCESS_SHADER_READ_BIT;
+  //   srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+  //   dstStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+  // } else {
+  //   // todo
+  //   return;
+  // }
+
+  // auto img = GetImage(handle);
+  // VkBufferMemoryBarrier srcBarrier =
+  //     SynchronizationManager<FRAME_OVERLAP>::CreateImageMemoryBarrier(
+  //         srcAccess, dstAccess, img.image, fromI, toI);
+
+  // vkCmdPipelineBarrier(cmd.buffer, srcStage, dstStage, 0, 0, nullptr, 1,
+  //                      &srcBarrier, 0, nullptr);
+}
+
 void GPUResourceAllocator::Destroy() {
   ReleaseAll();
   vmaDestroyAllocator(mAllocator);
 }
 
 void GPUResourceAllocator::unmapMappedBuffer(Buffer buffer) {
-  if(buffer.state.isMapped)
-    vmaUnmapMemory(mAllocator,buffer.allocation);
+  if (buffer.state.isMapped)
+    vmaUnmapMemory(mAllocator, buffer.allocation);
 }
 
 void GPUResourceAllocator::ReleaseAll() {
@@ -250,25 +708,10 @@ VkPipelineStageFlags getStageFlags(ResourceStage stage) {
 void GPUResourceAllocator::GPUCopyBuffer(const CommandBuffer &cmd,
                                          BufferHandle srcHandle,
                                          BufferHandle dstHandle, u32 srcOffset,
-                                         u32 dstOffset, u32 size, ResourceStage stage) {
-  auto & src = mBuffers.getResource(srcHandle);
-  auto & dst = mBuffers.getResource(dstHandle);
-
-  if (mVkData.useTransferQueue) {
-    if (dst.state.queueFamilyIndex != mVkData.transferQueueFamily) {
-      VkBufferMemoryBarrier srcBarrier =
-          SynchronizationManager::CreateBufferMemoryBarrier(
-              0, VK_ACCESS_TRANSFER_WRITE_BIT, dst.buffer,
-              dst.state.queueFamilyIndex, mVkData.transferQueueFamily);
-
-      //src.state.queueFamilyIndex = mVkData.transferQueueFamily;
-      dst.state.queueFamilyIndex = mVkData.transferQueueFamily;
-      dst.state.ownerQueueType = QueueType::Transfer;
-      vkCmdPipelineBarrier(cmd.buffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                       VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 1, &srcBarrier, 0,
-                       nullptr);
-    }
-  }
+                                         u32 dstOffset, u32 size,
+                                         ResourceStage stage) {
+  auto &src = mBuffers.getResource(srcHandle);
+  auto &dst = mBuffers.getResource(dstHandle);
 
   VkBufferCopy copyRegion{};
   copyRegion.srcOffset = srcOffset;
@@ -277,11 +720,12 @@ void GPUResourceAllocator::GPUCopyBuffer(const CommandBuffer &cmd,
   vkCmdCopyBuffer(cmd.buffer, src.buffer, dst.buffer, 1, &copyRegion);
 
   VkBufferMemoryBarrier barrier =
-      SynchronizationManager::CreateBufferMemoryBarrier(
-          VK_ACCESS_TRANSFER_WRITE_BIT, 0, dst.buffer, mVkData.transferQueueFamily, mVkData.graphicsQueueFamily);
+      SynchronizationManager<FRAME_OVERLAP>::CreateBufferMemoryBarrier(
+          VK_ACCESS_TRANSFER_WRITE_BIT, 0, dst.buffer,
+          mVkData.transferQueueFamily, mVkData.graphicsQueueFamily);
 
   vkCmdPipelineBarrier(cmd.buffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                       VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 1, &barrier, 0,
-                       nullptr);
+                       VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 1,
+                       &barrier, 0, nullptr);
 }
 } // namespace unknown::renderer::vulkan

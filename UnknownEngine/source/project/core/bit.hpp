@@ -4,6 +4,7 @@
 
 namespace unknown
 {
+    // Defined Enum Must ends with ENUM_MAX
     template <typename T>
     class BitMask
     {

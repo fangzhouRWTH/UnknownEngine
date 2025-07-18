@@ -24,12 +24,14 @@ set(EXPERIMENT_SOURCE_FILES
     ${PROJECT_SOURCE_DIR}/vulkan_renderer/descriptor.cpp
     ${PROJECT_SOURCE_DIR}/vulkan_renderer/pipeline.cpp
     ${PROJECT_SOURCE_DIR}/vulkan_renderer/renderGraph.cpp
+    ${PROJECT_SOURCE_DIR}/vulkan_renderer/renderPass.cpp
     ${PROJECT_SOURCE_DIR}/vulkan_renderer/shader.cpp
     ${PROJECT_SOURCE_DIR}/vulkan_renderer/command.cpp
     ${PROJECT_SOURCE_DIR}/vulkan_renderer/sync.cpp
     ${PROJECT_SOURCE_DIR}/vulkan_renderer/frame.cpp
     ${PROJECT_SOURCE_DIR}/vulkan_renderer/vkcore.cpp
     ${PROJECT_SOURCE_DIR}/vulkan_renderer/renderObject.cpp
+    ${PROJECT_SOURCE_DIR}/utils/imageLoader.cpp
     ${PROJECT_SOURCE_DIR}/exp.cpp
     #${PROJECT_SOURCE_DIR}/simpleVK.cpp
     ${PROJECT_SOURCE_DIR}/misc.cpp
@@ -60,4 +62,5 @@ target_include_directories(EXPERIMENT PUBLIC
                           "${CMAKE_SOURCE_DIR}/UnknownEngine/source/project"
                           "${CMAKE_SOURCE_DIR}/UnknownEngine/external/VKBOOTSTRAP/vk-bootstrap/src"
                           "${CMAKE_SOURCE_DIR}/UnknownEngine/external/VOLK/volk"
+                          "${CMAKE_SOURCE_DIR}/UnknownEngine/external/STB/stb"
                           )

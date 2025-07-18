@@ -110,5 +110,6 @@
 			"coroutine": "cpp",
 			"resumable": "cpp"
 		},
+		//"C_Cpp.default.intelliSenseMode": "windows-msvc-x64",
 	}
 }

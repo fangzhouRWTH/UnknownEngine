@@ -1,6 +1,7 @@
 #include "resource.hpp"
 #include "deviceResourceAllocator.hpp"
 #include "vulkan_renderer/command.hpp"
+#include "vulkan_renderer/sync.hpp"
 
 namespace unknown::renderer::vulkan {
 #define UNK_GLOBAL_FRAME_UNIFORM_MAX (4 * MB)
@@ -9,39 +10,18 @@ namespace unknown::renderer::vulkan {
 ResourceManager::~ResourceManager() {}
 
 void ResourceManager::Init(const ResourceManagerDesc &desc) {
-  // mDeviceResourcePtr = std::make_unique<DeviceResourceAllocator>();
-  // mDeviceResourcePtr->Init(desc.vkData);
   mVkData = desc.vkData;
   mGPUResourcePtr = std::make_unique<GPUResourceAllocator>();
   mGPUResourcePtr->Init(desc.vkData);
+
+  assert(desc.syncManager != nullptr);
+  mSyncManagerPtr = desc.syncManager;
+  mCmdManagerPtr = desc.cmdManager;
 
   mUniformRegistrationPtr = std::make_unique<UniformRegistrationManager>();
 
   mUniformAlignment = desc.uniformAlignment;
   mStorageAlignment = desc.storageAlignment;
-
-  CommandManagerInitDesc cmddesc;
-  cmddesc.device = desc.vkData.device;
-  //mTransferCommandManagerPtr = std::make_unique<CommandManager>();
-
-  if (desc.vkData.useTransferQueue &&
-      desc.vkData.graphicsQueueFamily != desc.vkData.transferQueueFamily) {
-    mUseTransferQueue = true;
-    cmddesc.queueFamilyIndex = desc.vkData.transferQueueFamily;
-  } else {
-    mUseTransferQueue = false;
-    cmddesc.queueFamilyIndex = desc.vkData.graphicsQueueFamily;
-  }
-
-  //temp
-  mUseTransferQueue = true;
-  cmddesc.queueFamilyIndex = desc.vkData.graphicsQueueFamily;
-
-  // mTransferCommandManagerPtr->Init(cmddesc);
-  // for(auto & c : mTransferCommand)
-  // {
-  //   c = mTransferCommandManagerPtr->Create();
-  // }
 
   {
     auto uMemSize =
@@ -69,14 +49,6 @@ void ResourceManager::Init(const ResourceManagerDesc &desc) {
     mFrameUniformStagingBuffer = GetBuffer(mFrameUniformStagingBufferHandle);
     mFrameUniformBufferSize = uMemSize * 4u;
     mFrameUniformMemorySize_CPU = uMemSize;
-
-    // UniformRegistrationInfo frameBufferReg;
-    //   frameBufferReg.alloc.ptr = mFrameUniformMemory_CPU->getBasePtr();
-    //   frameBufferReg.alloc.reserve = uMemSize;
-    //   frameBufferReg.alloc.size = uMemSize;
-    //   frameBufferReg.desc.name = "frame_uniform_ring_buffer";
-    //   frameBufferReg.desc.size = uMemSize * 4u;
-    //   frameBufferReg.desc.type =
   }
 
   {
@@ -116,22 +88,34 @@ Buffer ResourceManager::GetBuffer(const BufferHandle &handle) const {
   return mGPUResourcePtr->GetBuffer(handle);
 }
 
-Buffer & ResourceManager::GetBuffer(const BufferHandle &handle) {
+Buffer &ResourceManager::GetBuffer(const BufferHandle &handle) {
   return mGPUResourcePtr->GetBuffer(handle);
 }
 
 void ResourceManager::DestroyBuffer(const BufferHandle &handle) {
   mGPUResourcePtr->Release(handle);
-  //mTransferCommandManagerPtr->Destroy();
+  // mTransferCommandManagerPtr->Destroy();
 }
 
 ImageHandle ResourceManager::CreateImage(const ImageDesc &desc) {
   return mGPUResourcePtr->CreateImage(desc);
 }
 
+ImageHandle ResourceManager::CreateImage(ImageDesc &desc,
+                                         const std::string &filePath) {
+  u32 width, height, channels;
+  return mGPUResourcePtr->LoadCreateImage(mCmdManagerPtr, true, desc, filePath, width, height,
+                                          channels);
+}
+
 Image ResourceManager::GetImage(const ImageHandle &handle) {
   return mGPUResourcePtr->GetImage(handle);
 }
+
+void ResourceManager::TransitionImage(const ImageHandle &handle,
+                                      const ImageTransitionDesc &desc) {
+                                        mGPUResourcePtr->TransitionImageResource(desc.cmd,handle,desc.newLayout);
+                                      }
 
 void ResourceManager::DestroyImage(const ImageHandle &handle) {
   mGPUResourcePtr->Release(handle);
@@ -189,114 +173,306 @@ UniformRegistrationInfo ResourceManager::GetBindingInfo(const SString &name) {
   return it->second;
 }
 
-void ResourceManager::FlushFrameResource(std::shared_ptr<CommandBufferManager<FRAME_OVERLAP>> cmdManager, Semaphore start, Semaphore finish) {
-  // temp
-  // if (mUseTransferCommand) {
-  // VkCommandBufferBeginInfo info{};
-  // info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-  // info.pNext = nullptr;
-  // info.pInheritanceInfo = nullptr;
-  // info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+void ResourceManager::FlushFrameResource(Semaphore start, Semaphore finish) {
 
-  //auto cmd = mTransferCommand[mTransferCommandIndex];
-  auto cmd = cmdManager->BeginCommandBuffer(QueueType::Transfer);
+  bool needOwnershipTransfer =
+      mVkData.useTransferQueue && mVkData.hasTransferQueue;
+  Semaphore flushWaitSemaphore;
 
-  //VK_CHECK(vkBeginCommandBuffer(cmd.buffer, &info));
+  if (needOwnershipTransfer) {
+    auto gcmd = mCmdManagerPtr->BeginCommandBuffer(QueueType::Graphic);
+    auto tcmd = mCmdManagerPtr->BeginCommandBuffer(QueueType::Transfer);
+    acquireFrameResourceOwnership(gcmd, tcmd);
+    mCmdManagerPtr->EndCommandBuffer(gcmd);
+    mCmdManagerPtr->EndCommandBuffer(tcmd);
 
+    VkCommandBufferSubmitInfo gcmdinfo = {};
+    gcmdinfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+    gcmdinfo.pNext = nullptr;
+    gcmdinfo.commandBuffer = gcmd.buffer;
+    gcmdinfo.deviceMask = 0;
+
+    VkCommandBufferSubmitInfo tcmdinfo = {};
+    tcmdinfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+    tcmdinfo.pNext = nullptr;
+    tcmdinfo.commandBuffer = tcmd.buffer;
+    tcmdinfo.deviceMask = 0;
+
+    auto gh = mSyncManagerPtr->AcquireFrameSemaphore();
+    auto gReleaseSema = mSyncManagerPtr->GetSemaphore(gh);
+
+    auto th = mSyncManagerPtr->AcquireFrameSemaphore();
+    auto tAcquireSema = mSyncManagerPtr->GetSemaphore(th);
+
+    flushWaitSemaphore = tAcquireSema;
+
+    // release
+    VkSemaphoreSubmitInfo releaseWaitinfo = {};
+    releaseWaitinfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    releaseWaitinfo.pNext = nullptr;
+    releaseWaitinfo.semaphore = start.data;
+    releaseWaitinfo.stageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+    releaseWaitinfo.deviceIndex = 0;
+    releaseWaitinfo.value = 1;
+
+    VkSemaphoreSubmitInfo releaseSignalinfo = {};
+    releaseSignalinfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    releaseSignalinfo.pNext = nullptr;
+    releaseSignalinfo.semaphore = gReleaseSema.data;
+    releaseSignalinfo.stageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    releaseSignalinfo.deviceIndex = 0;
+    releaseSignalinfo.value = 1;
+
+    VkSubmitInfo2 releaseSubmitinfo = {};
+    releaseSubmitinfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+    releaseSubmitinfo.pNext = nullptr;
+
+    releaseSubmitinfo.waitSemaphoreInfoCount = 1;
+    releaseSubmitinfo.pWaitSemaphoreInfos = &releaseWaitinfo;
+
+    releaseSubmitinfo.signalSemaphoreInfoCount = 1;
+    releaseSubmitinfo.pSignalSemaphoreInfos = &releaseSignalinfo;
+
+    releaseSubmitinfo.commandBufferInfoCount = 1;
+    releaseSubmitinfo.pCommandBufferInfos = &gcmdinfo;
+    VK_CHECK(vkQueueSubmit2(mVkData.graphicsQueue, 1, &releaseSubmitinfo,
+                            VK_NULL_HANDLE));
+
+    // acquire
+    VkSemaphoreSubmitInfo acquireWaitinfo = {};
+    acquireWaitinfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    acquireWaitinfo.pNext = nullptr;
+    acquireWaitinfo.semaphore = gReleaseSema.data;
+    acquireWaitinfo.stageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    acquireWaitinfo.deviceIndex = 0;
+    acquireWaitinfo.value = 1;
+
+    VkSemaphoreSubmitInfo acquireSignalinfo = {};
+    acquireSignalinfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    acquireSignalinfo.pNext = nullptr;
+    acquireSignalinfo.semaphore = tAcquireSema.data;
+    acquireSignalinfo.stageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    acquireSignalinfo.deviceIndex = 0;
+    acquireSignalinfo.value = 1;
+
+    VkSubmitInfo2 acquireSubmitinfo = {};
+    acquireSubmitinfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+    acquireSubmitinfo.pNext = nullptr;
+
+    acquireSubmitinfo.waitSemaphoreInfoCount = 1;
+    acquireSubmitinfo.pWaitSemaphoreInfos = &acquireWaitinfo;
+
+    acquireSubmitinfo.signalSemaphoreInfoCount = 1;
+    acquireSubmitinfo.pSignalSemaphoreInfos = &acquireSignalinfo;
+
+    acquireSubmitinfo.commandBufferInfoCount = 1;
+    acquireSubmitinfo.pCommandBufferInfos = &tcmdinfo;
+    VK_CHECK(vkQueueSubmit2(mVkData.transferQueue, 1, &acquireSubmitinfo,
+                            VK_NULL_HANDLE));
+  } else {
+    flushWaitSemaphore = start;
+  }
+
+  auto cmd = mCmdManagerPtr->BeginCommandBuffer(QueueType::Transfer);
   stagingFrameResource(cmd);
+  mCmdManagerPtr->EndCommandBuffer(cmd);
 
-  cmdManager->EndCommandBuffer(cmd);
-  //VK_CHECK(vkEndCommandBuffer(cmd.buffer));
+  Semaphore flushSignalSemaphore;
+  if (needOwnershipTransfer) {
+    auto flsh = mSyncManagerPtr->AcquireFrameSemaphore();
+    flushSignalSemaphore = mSyncManagerPtr->GetSemaphore(flsh);
+  } else {
+    flushSignalSemaphore = finish;
+  }
 
-  VkCommandBufferSubmitInfo cmdinfo = {};
-  cmdinfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
-  cmdinfo.pNext = nullptr;
-  cmdinfo.commandBuffer = cmd.buffer;
-  cmdinfo.deviceMask = 0;
+  {
+    VkCommandBufferSubmitInfo cmdinfo = {};
+    cmdinfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+    cmdinfo.pNext = nullptr;
+    cmdinfo.commandBuffer = cmd.buffer;
+    cmdinfo.deviceMask = 0;
 
-  VkSemaphoreSubmitInfo waitinfo = {};
-  waitinfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-  waitinfo.pNext = nullptr;
-  waitinfo.semaphore = start.data;
-  waitinfo.stageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;//VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR;
-  waitinfo.deviceIndex = 0;
-  waitinfo.value = 1;
+    VkSemaphoreSubmitInfo waitinfo = {};
+    waitinfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    waitinfo.pNext = nullptr;
+    waitinfo.semaphore = flushWaitSemaphore.data;
+    waitinfo.stageMask =
+        VK_PIPELINE_STAGE_TRANSFER_BIT; // VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT_KHR;
+    waitinfo.deviceIndex = 0;
+    waitinfo.value = 1;
 
-  VkSemaphoreSubmitInfo signalinfo = {};
-  signalinfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
-  signalinfo.pNext = nullptr;
-  signalinfo.semaphore = finish.data;
-  signalinfo.stageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;//VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT;
-  signalinfo.deviceIndex = 0;
-  signalinfo.value = 1;
+    VkSemaphoreSubmitInfo signalinfo = {};
+    signalinfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    signalinfo.pNext = nullptr;
+    signalinfo.semaphore = flushSignalSemaphore.data;
+    signalinfo.stageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    ;
+    signalinfo.deviceIndex = 0;
+    signalinfo.value = 1;
 
-  VkSubmitInfo2 submitinfo = {};
-  submitinfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
-  submitinfo.pNext = nullptr;
+    VkSubmitInfo2 submitinfo = {};
+    submitinfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+    submitinfo.pNext = nullptr;
 
-  submitinfo.waitSemaphoreInfoCount = 1;
-  submitinfo.pWaitSemaphoreInfos = &waitinfo;
+    submitinfo.waitSemaphoreInfoCount = 1;
+    submitinfo.pWaitSemaphoreInfos = &waitinfo;
 
-  submitinfo.signalSemaphoreInfoCount = 1;
-  submitinfo.pSignalSemaphoreInfos = &signalinfo;
+    submitinfo.signalSemaphoreInfoCount = 1;
+    submitinfo.pSignalSemaphoreInfos = &signalinfo;
 
-  submitinfo.commandBufferInfoCount = 1;
-  submitinfo.pCommandBufferInfos = &cmdinfo;
+    submitinfo.commandBufferInfoCount = 1;
+    submitinfo.pCommandBufferInfos = &cmdinfo;
 
-  auto queue = mVkData.useTransferQueue && mVkData.hasTransferQueue
-                   ? mVkData.transferQueue
-                   : mVkData.graphicsQueue;
+    auto queue =
+        needOwnershipTransfer ? mVkData.transferQueue : mVkData.graphicsQueue;
 
-  //temp
-  //queue = mVkData.graphicsQueue;
+    VK_CHECK(vkQueueSubmit2(queue, 1, &submitinfo, VK_NULL_HANDLE));
+  }
 
-  VK_CHECK(vkQueueSubmit2(queue, 1, &submitinfo, VK_NULL_HANDLE));
+  if (needOwnershipTransfer) {
+    auto gcmd = mCmdManagerPtr->BeginCommandBuffer(QueueType::Graphic);
+    auto tcmd = mCmdManagerPtr->BeginCommandBuffer(QueueType::Transfer);
+    releaseFrameResourceOwnership(gcmd, tcmd);
+    mCmdManagerPtr->EndCommandBuffer(gcmd);
+    mCmdManagerPtr->EndCommandBuffer(tcmd);
+
+    VkCommandBufferSubmitInfo gcmdinfo = {};
+    gcmdinfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+    gcmdinfo.pNext = nullptr;
+    gcmdinfo.commandBuffer = gcmd.buffer;
+    gcmdinfo.deviceMask = 0;
+
+    VkCommandBufferSubmitInfo tcmdinfo = {};
+    tcmdinfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+    tcmdinfo.pNext = nullptr;
+    tcmdinfo.commandBuffer = tcmd.buffer;
+    tcmdinfo.deviceMask = 0;
+
+    auto th = mSyncManagerPtr->AcquireFrameSemaphore();
+    auto tReleaseSema = mSyncManagerPtr->GetSemaphore(th);
+
+    // release
+    VkSemaphoreSubmitInfo releaseWaitinfo = {};
+    releaseWaitinfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    releaseWaitinfo.pNext = nullptr;
+    releaseWaitinfo.semaphore = flushSignalSemaphore.data;
+    releaseWaitinfo.stageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    releaseWaitinfo.deviceIndex = 0;
+    releaseWaitinfo.value = 1;
+
+    VkSemaphoreSubmitInfo releaseSignalinfo = {};
+    releaseSignalinfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    releaseSignalinfo.pNext = nullptr;
+    releaseSignalinfo.semaphore = tReleaseSema.data;
+    releaseSignalinfo.stageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    releaseSignalinfo.deviceIndex = 0;
+    releaseSignalinfo.value = 1;
+
+    VkSubmitInfo2 releaseSubmitinfo = {};
+    releaseSubmitinfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+    releaseSubmitinfo.pNext = nullptr;
+
+    releaseSubmitinfo.waitSemaphoreInfoCount = 1;
+    releaseSubmitinfo.pWaitSemaphoreInfos = &releaseWaitinfo;
+
+    releaseSubmitinfo.signalSemaphoreInfoCount = 1;
+    releaseSubmitinfo.pSignalSemaphoreInfos = &releaseSignalinfo;
+
+    releaseSubmitinfo.commandBufferInfoCount = 1;
+    releaseSubmitinfo.pCommandBufferInfos = &tcmdinfo;
+    VK_CHECK(vkQueueSubmit2(mVkData.transferQueue, 1, &releaseSubmitinfo,
+                            VK_NULL_HANDLE));
+
+    // acquire
+    VkSemaphoreSubmitInfo acquireWaitinfo = {};
+    acquireWaitinfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    acquireWaitinfo.pNext = nullptr;
+    acquireWaitinfo.semaphore = tReleaseSema.data;
+    acquireWaitinfo.stageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+    acquireWaitinfo.deviceIndex = 0;
+    acquireWaitinfo.value = 1;
+
+    VkSemaphoreSubmitInfo acquireSignalinfo = {};
+    acquireSignalinfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+    acquireSignalinfo.pNext = nullptr;
+    acquireSignalinfo.semaphore = finish.data;
+    acquireSignalinfo.stageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    acquireSignalinfo.deviceIndex = 0;
+    acquireSignalinfo.value = 1;
+
+    VkSubmitInfo2 acquireSubmitinfo = {};
+    acquireSubmitinfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+    acquireSubmitinfo.pNext = nullptr;
+
+    acquireSubmitinfo.waitSemaphoreInfoCount = 1;
+    acquireSubmitinfo.pWaitSemaphoreInfos = &acquireWaitinfo;
+
+    acquireSubmitinfo.signalSemaphoreInfoCount = 1;
+    acquireSubmitinfo.pSignalSemaphoreInfos = &acquireSignalinfo;
+
+    acquireSubmitinfo.commandBufferInfoCount = 1;
+    acquireSubmitinfo.pCommandBufferInfos = &gcmdinfo;
+    VK_CHECK(vkQueueSubmit2(mVkData.graphicsQueue, 1, &acquireSubmitinfo,
+                            VK_NULL_HANDLE));
+  }
 
   frame();
 }
 
 void ResourceManager::Reset() { mGPUResourcePtr->ReleaseAll(); }
 
-void ResourceManager::Destroy() { 
-  //mTransferCommandManagerPtr->Destroy();
-  mGPUResourcePtr->Destroy(); 
+void ResourceManager::Destroy() {
+  // mTransferCommandManagerPtr->Destroy();
+  mGPUResourcePtr->Destroy();
 }
 
 void ResourceManager::destroy() {} // vmaDestroyAllocator(mAllocator); }
 
+void ResourceManager::acquireFrameResourceOwnership(const CommandBuffer &gcmd,
+                                                    const CommandBuffer &tcmd) {
+  mGPUResourcePtr->ReleaseOwnership(gcmd, mFrameUniformBufferHandle,
+                                    QueueType::Graphic, QueueType::Transfer);
+  mGPUResourcePtr->ReleaseOwnership(gcmd, mFrameStorageBufferHandle,
+                                    QueueType::Graphic, QueueType::Transfer);
+
+  mGPUResourcePtr->AcquireOwnership(tcmd, mFrameUniformBufferHandle,
+                                    QueueType::Graphic, QueueType::Transfer);
+  mGPUResourcePtr->AcquireOwnership(tcmd, mFrameStorageBufferHandle,
+                                    QueueType::Graphic, QueueType::Transfer);
+}
+
+void ResourceManager::releaseFrameResourceOwnership(const CommandBuffer &gcmd,
+                                                    const CommandBuffer &tcmd) {
+  mGPUResourcePtr->ReleaseOwnership(tcmd, mFrameUniformBufferHandle,
+                                    QueueType::Transfer, QueueType::Graphic);
+  mGPUResourcePtr->ReleaseOwnership(tcmd, mFrameStorageBufferHandle,
+                                    QueueType::Transfer, QueueType::Graphic);
+
+  mGPUResourcePtr->AcquireOwnership(gcmd, mFrameUniformBufferHandle,
+                                    QueueType::Transfer, QueueType::Graphic);
+  mGPUResourcePtr->AcquireOwnership(gcmd, mFrameStorageBufferHandle,
+                                    QueueType::Transfer, QueueType::Graphic);
+}
+
 void ResourceManager::stagingFrameResource(const CommandBuffer &cmd) {
   {
-    // mDeviceResourcePtr->MapBuffer(
-    //     mFrameUniformMemorySize_CPU, mFrameUniformMemory_CPU->getBasePtr(),
-    //     mFrameUniformStagingBuffer, mFrameUniformOffset);
-    // mDeviceResourcePtr->StagingBuffer(
-    //     cmd, mFrameUniformMemorySize_CPU, mFrameUniformStagingBuffer,
-    //     mFrameUniformBuffer, mFrameUniformOffset, mFrameUniformOffset,
-    //     ResourceStage::UniformTaskMesh);
-
     mGPUResourcePtr->MapCopyBuffer(
         mFrameUniformMemory_CPU->getBasePtr(), mFrameUniformStagingBufferHandle,
         mFrameUniformOffset, mFrameUniformMemorySize_CPU);
+
     mGPUResourcePtr->GPUCopyBuffer(
-        cmd, mFrameUniformStagingBufferHandle,
-        mFrameUniformBufferHandle, mFrameUniformOffset, mFrameUniformOffset, mFrameUniformMemorySize_CPU,
+        cmd, mFrameUniformStagingBufferHandle, mFrameUniformBufferHandle,
+        mFrameUniformOffset, mFrameUniformOffset, mFrameUniformMemorySize_CPU,
         ResourceStage::UniformTaskMesh);
   }
 
   {
-    // mGPUResourcePtr->MapBuffer(
-    //     mFrameStorageMemorySize_CPU, mFrameStorageMemory_CPU->getBasePtr(),
-    //     mFrameStorageStagingBuffer, mFrameStorageOffset);
-    // mGPUResourcePtr->StagingBuffer(
-    //     cmd, mFrameStorageMemorySize_CPU, mFrameStorageStagingBuffer,
-    //     mFrameStorageBuffer, mFrameStorageOffset, mFrameStorageOffset,
-    //     ResourceStage::UniformTaskMesh);
     mGPUResourcePtr->MapCopyBuffer(
         mFrameStorageMemory_CPU->getBasePtr(), mFrameStorageStagingBufferHandle,
         mFrameStorageOffset, mFrameStorageMemorySize_CPU);
     mGPUResourcePtr->GPUCopyBuffer(
-        cmd, mFrameStorageStagingBufferHandle,
-        mFrameStorageBufferHandle, mFrameStorageOffset, mFrameStorageOffset, mFrameStorageMemorySize_CPU,
+        cmd, mFrameStorageStagingBufferHandle, mFrameStorageBufferHandle,
+        mFrameStorageOffset, mFrameStorageOffset, mFrameStorageMemorySize_CPU,
         ResourceStage::UniformTaskMesh);
   }
 }
@@ -379,7 +555,7 @@ MemoryAllocation ResourceManager::getFrameStoragesHostMemory() const {
 }
 
 void ResourceManager::frame() {
-  //mTransferCommandIndex =  (mTransferCommandIndex + 1u) % 2u;
+  // mTransferCommandIndex =  (mTransferCommandIndex + 1u) % 2u;
 
   mFrameUniformOffset += mFrameUniformMemorySize_CPU;
   mFrameUniformOffset = mFrameUniformOffset + mFrameUniformMemorySize_CPU >=

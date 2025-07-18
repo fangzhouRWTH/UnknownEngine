@@ -73,7 +73,7 @@ namespace unknown::ecs
 
         void DeleteComponent(const ComponentHandle &componentHandle, const EntityID &entityID)
         {
-            T *component = static_cast<T *>(GetComponent<T>(entityID));
+            T *component = static_cast<T *>(GetComponent(entityID));
             if (component)
             {
                 _entity_component_map.erase(entityID);

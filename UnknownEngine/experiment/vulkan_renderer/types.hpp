@@ -6,11 +6,13 @@
 #include "vulkan_renderer/sstring.hpp"
 
 namespace unknown::renderer::vulkan {
-
 struct alignas(16) TestSceneData {
   Mat4f view;
   Mat4f proj;
   Mat4f view_proj;
+
+  Mat4f view_inv;
+  Mat4f proj_inv;
 
   Vec4f color1;
   Vec4f color2;
@@ -41,9 +43,10 @@ struct TaskUniform {
   float meshlet_density = 2.0f;
 };
 
-enum class QueueType
-{
-  Graphic,Transfer,Compute,
+enum class QueueType {
+  Graphic,
+  Transfer,
+  Compute,
 };
 
 struct VulkanCoreData {
@@ -108,18 +111,7 @@ private:
 };
 
 struct MemoryUsage {
-  // MemoryUsage &gpu() {
-  //   flags = VMA_MEMORY_USAGE_GPU_ONLY;
-  //   return *this;
-  // }
-  // MemoryUsage &cpu() {
-  //   flags = VMA_MEMORY_USAGE_CPU_ONLY;
-  //   return *this;
-  // }
-  // MemoryUsage &cpu_gpu() {
-  //   flags = VMA_MEMORY_USAGE_CPU_TO_GPU;
-  //   return *this;
-  // }
+
   void prefer_device() { flags = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE; }
 
   void prefer_host() { flags = VMA_MEMORY_USAGE_AUTO_PREFER_HOST; }
@@ -128,39 +120,24 @@ struct MemoryUsage {
 
   void prefer_lazy() { flags = VMA_MEMORY_USAGE_GPU_LAZILY_ALLOCATED; }
 
-  VmaMemoryUsage get() const {return flags;}
-
-  // MemoryUsage &property_local() {
-  //   property = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-  //   return *this;
-  // }
-  // MemoryUsage &property_map() {
-  //   property = VkMemoryPropertyFlags(VMA_ALLOCATION_CREATE_MAPPED_BIT);
-  //   return *this;
-  // }
-
-
-  //VmaMemoryUsage getUsage() const { return flags; }
-  //VkMemoryPropertyFlags getProperty() const { return property; }
+  VmaMemoryUsage get() const { return flags; }
 
 private:
   VmaMemoryUsage flags = VMA_MEMORY_USAGE_UNKNOWN;
-  //VkMemoryPropertyFlags property;
 };
 
 struct MemoryProperty {
+public:
   void staging() {
     property = VMA_ALLOCATION_CREATE_MAPPED_BIT |
                VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
     onlyStaging = true;
   }
-  
-  VmaAllocationCreateFlags get() const
-  {
-    return property;
-  }
 
-  bool isOnlyStaging() const {return onlyStaging;}
+  VmaAllocationCreateFlags get() const { return property; }
+
+  bool isOnlyStaging() const { return onlyStaging; }
+
 private:
   VmaAllocationCreateFlags property = 0;
   bool onlyStaging;
@@ -194,6 +171,10 @@ struct ImageUsage {
     flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     return *this;
   }
+  ImageUsage &sample() {
+    flags |= VK_IMAGE_USAGE_SAMPLED_BIT;
+    return *this;
+  }
 
   VkImageUsageFlags get() const { return flags; }
 
@@ -211,6 +192,12 @@ struct ImageFormat {
 
   ImageFormat &rgba_16_sf() {
     format = VK_FORMAT_R16G16B16A16_SFLOAT;
+    return *this;
+  }
+
+  ImageFormat &rgba_8_srgb()
+  {
+    format = VK_FORMAT_R8G8B8A8_SRGB;
     return *this;
   }
 
@@ -261,7 +248,7 @@ struct BufferState {
   bool onlyStaging = false;
   u32 queueFamilyIndex;
   QueueType ownerQueueType;
-  void* mapPtr = nullptr;
+  void *mapPtr = nullptr;
 };
 
 struct Buffer {
@@ -278,9 +265,12 @@ struct Image {
   VmaAllocation allocation;
   VkExtent3D extent;
   VkFormat format;
+  VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-  //ResourceState state;
+  // ResourceState state;
 };
+
+enum struct UniformType { FrameUniform, FrameStorage, Uniform, Storage };
 
 enum struct ResourceStage {
   UniformTaskMesh,
@@ -297,22 +287,62 @@ enum struct ResourceStage {
   General
 };
 
-enum struct UniformType { FrameUniform, FrameStorage, Uniform, Storage };
+struct ResourceUsageInfo {
+  VkPipelineStageFlagBits stage;
+  VkAccessFlagBits access;
+  QueueType queue;
+  u32 index;
+};
 
-// enum class ResourceType { Image, Buffer, NotDefined };
+struct ResourceOwnershipInfo {
+  ResourceUsageInfo src;
+  ResourceUsageInfo dst;
+};
 
-// union ResourceUnion {
-//   Buffer buffer;
-//   Image image;
-// };
+enum class ResourceOwnershipTransition {
+  Acquire_Graphic_Transfer,
+  Release_Graphic_Transfer,
 
-// struct Resource {
-//   ResourceUnion data;
-//   ResourceType type;
-//   ResourceState state;
-// };
+  Acquire_Graphic_Compute,
+  Release_Graphic_Compute,
 
-// DECL_CONTAINER_HANDLE(ResourceHandle, Recycle, VectorContainer, Resource);
+  Acquire_Transfer_Graphic,
+  Release_Transfer_Graphic,
+
+  Acquire_Transfer_Compute,
+  Release_Transfer_Compute,
+
+  Acquire_Compute_Graphic,
+  Release_Compute_Graphic,
+
+  Acquire_Compute_Transfer,
+  Release_Compute_Transfer,
+};
+
+enum class ResourceUsage {
+  None,
+
+  TransferSrc,
+  TransferDst,
+  // VertexBuffer,
+  // IndexBuffer,
+
+  UniformBuffer,
+  StorageBufferRead,
+  StorageBufferWrite,
+
+  SampledImage,
+  StorageImageRead,
+  StorageImageWrite,
+
+  ColorAttachmentWrite,
+  ColorAttachmentRead,
+  DepthAttachmentWrite,
+
+  // Compute
+
+  Present
+};
 
 DECL_CONTAINER_HANDLE(ImageHandle, Recycle, VectorContainer, Image);
 DECL_CONTAINER_HANDLE(BufferHandle, Recycle, VectorContainer, Buffer);

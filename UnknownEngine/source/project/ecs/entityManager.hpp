@@ -49,7 +49,7 @@ namespace unknown::ecs
 
         void DeleteEntity(const EntityID &id)
         {
-            T *entity = static_cast<T *>(GetEntity<T>(id));
+            T *entity = static_cast<T *>(GetEntity(id));
             if (entity)
             {
                 memory::Delete<T>(_entity_allocator, entity);

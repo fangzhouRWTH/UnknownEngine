@@ -174,19 +174,19 @@ inline void Frames<FRAME_COUNT>::Init(VulkanContext ctx) {
   depthTargetDesc.memoryUsage.prefer_device();
 
   for (auto &f : mFrames) {
-    fDesc.renderFenceHandle = ctx.synchronizationManager->CreateFence();
+    fDesc.renderFenceHandle = ctx.synchronizationManager->AcquireFence();
     fDesc.renderFence =
         ctx.synchronizationManager->GetFence(fDesc.renderFenceHandle);
 
-    fDesc.resourceSemaphoreHandle = ctx.synchronizationManager->CreateSemaphore();
+    fDesc.resourceSemaphoreHandle = ctx.synchronizationManager->AcquireSemaphore();
     fDesc.resourceSemaphore = ctx.synchronizationManager->GetSemaphore(fDesc.resourceSemaphoreHandle);    
 
     fDesc.swapchainSemaphoreHandle =
-        ctx.synchronizationManager->CreateSemaphore();
+        ctx.synchronizationManager->AcquireSemaphore();
     fDesc.swapchainSemaphore = ctx.synchronizationManager->GetSemaphore(
         fDesc.swapchainSemaphoreHandle);
 
-    fDesc.renderSemaphoreHandle = ctx.synchronizationManager->CreateSemaphore();
+    fDesc.renderSemaphoreHandle = ctx.synchronizationManager->AcquireSemaphore();
     fDesc.renderSemaphore =
         ctx.synchronizationManager->GetSemaphore(fDesc.renderSemaphoreHandle);
 
